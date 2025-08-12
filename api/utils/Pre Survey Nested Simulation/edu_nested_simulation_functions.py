@@ -758,7 +758,11 @@ def get_high_scoring_L0s(
 
     # Initialize the figure for scatter plot if required
     if plot_truth_scores:
-        plt.figure(figsize=(4, 4))
+        plt.figure(figsize=(4.25, 4))
+        max_real = -np.inf
+        min_real = np.inf
+        max_measured = -np.inf
+        min_measured = np.inf
 
     for _ in range(n_simulations):
         # Simulate scores
@@ -862,12 +866,24 @@ def get_high_scoring_L0s(
             measured_scores = [score[1] for score in measured_truth_scores]
             plt.scatter(real_scores, measured_scores, alpha=0.5, color="black", s=10)
 
+            max_real = max(max(real_scores), max_real)
+            min_real = min(min(real_scores), min_real)
+            max_measured = max(max(measured_scores), max_measured)
+            min_measured = min(min(measured_scores), min_measured)
+
     # Finalize the scatter plot if required
     if plot_truth_scores:
-        plt.title("Real vs Measured Discrepancy Scores", fontsize=16)
-        plt.xlabel("Real Discrepancy Scores", fontsize=14)
-        plt.ylabel("Measured Discrepancy Scores", fontsize=14)
-        plt.grid()
+        #plt.title("Real vs Measured Discrepancy Scores", fontsize=16)
+        plt.xlabel("Real L0-L1 Discrepancy Scores", fontsize=13)
+        plt.ylabel("Measured L0-L1 Discrepancy Scores", fontsize=13)
+        min_val = min([min_real, min_measured])
+        max_val = max([max_real, max_measured])
+        axis_limits = [min_val - 0.05* (max_val - min_val), max_val + 0.05*(max_val - min_val)]
+        plt.xlim(axis_limits)
+        plt.ylim(axis_limits)
+        #plt.xticks(np.round(np.arange(axis_limits[0], axis_limits[1] + 1, 5)), fontsize=12)
+        #plt.yticks(np.round(np.arange(axis_limits[0], axis_limits[1] + 1, 5)), fontsize=12)
+        #plt.grid()
         plt.tight_layout()
         plt.show()
 
@@ -1044,7 +1060,7 @@ def L1_reliability_nested(L1_collusion_index_list,
 
     return(n_real_L0s_mean, n_real_L0s_ci, L2_L1_truth_scores, L0_real_truth_scores, all_L2_L1_truth_scores, all_overlap_counts)
 
-def L1_reliability_scenario_wise(scenario_parameter_list, n_L0s_reward, method, n_simulations,
+def L1_reliability_scenario_wise(scenario_parameter_list, n_L0s_reward, method, n_simulations, x_variable, xlabel,
                    make_plots=True, xbuffer=0.1):
     """
     Plot the dependance of L1 confidence guarantee (number of real green zone L0s)
@@ -1071,6 +1087,8 @@ def L1_reliability_scenario_wise(scenario_parameter_list, n_L0s_reward, method, 
         n_L0s_reward (int): Number of L0s to reward.
         method (str): Method to calculate discrepancy scores.
         n_simulations (int): Number of simulations to run.
+        x_variable (list): List of x variable values to plot against. If empty, L2-L1 truth scores will be used.
+        xlabel (str): Label for the x-axis. Only used if x_variable is not empty.
         make_plots (bool): Whether to create plots or not.
 
     """
@@ -1124,19 +1142,28 @@ def L1_reliability_scenario_wise(scenario_parameter_list, n_L0s_reward, method, 
         fig, ax = plt.subplots(figsize=(6, 5))
         y_lower_errors, y_upper_errors = zip(*n_real_L0s_ci)
         x_lower_errors, x_upper_errors = zip(*L2_L1_truth_scores_ci)
-        ax.errorbar(L2_L1_truth_scores, n_real_L0s_mean, 
-                    yerr=[y_lower_errors, y_upper_errors], # Error bars for overlap counts
-                    xerr = [x_lower_errors, x_upper_errors], # Error bars for L2-L1 truth scores
-                    fmt='o', color='black', capsize=5)
+        if len(x_variable) == 0:
+            x_variable = L2_L1_truth_scores
+            ax.errorbar(x_variable, n_real_L0s_mean, 
+                        yerr=[y_lower_errors, y_upper_errors], # Error bars for overlap counts
+                        xerr = [x_lower_errors, x_upper_errors], # Error bars for L2-L1 truth scores
+                        fmt='o', color='black', capsize=5)
+        else:
+                ax.errorbar(x_variable, n_real_L0s_mean, 
+                            yerr=[y_lower_errors, y_upper_errors], # Error bars for overlap counts
+                            fmt='o', color='black', capsize=5)
         # Show number of L0s rewarded as a dashed blue horizontal line
         ax.axhline(y=n_L0s_reward, color='blue', linestyle='--', label='Number of L0s Rewarded')
         ax.legend()
-        ax.set_title("Dependence of L1 Confidence Guarantee on L2-L1 Discrepancy Score", fontsize=16) 
-        ax.set_xlabel("L2-L1 Truth Score", fontsize=14)
-        ax.set_ylabel("Number of Real Green Zone L0s", fontsize=14)
+        #ax.set_title("Dependence of L1 Confidence Guarantee on L2-L1 Discrepancy Score", fontsize=16) 
+        if len(x_variable) == 0:
+            ax.set_xlabel("L2-L1 Truth Score", fontsize=14)
+        else:
+            ax.set_xlabel(xlabel, fontsize=14)
+        ax.set_ylabel("Number of L0s in top {0}".format(n_L0s_reward), fontsize=14)
         ax.tick_params(axis="both", labelsize=12)
         ax.set_ylim(0, n_L0s_reward*1.2)
-        ax.set_xlim(min(L2_L1_truth_scores) - xbuffer, max(L2_L1_truth_scores) + xbuffer)
+        ax.set_xlim(min(x_variable) - xbuffer, max(x_variable) + xbuffer)
         ax.grid()
         plt.tight_layout()
         plt.show()
