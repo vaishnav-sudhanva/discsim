@@ -102,7 +102,7 @@ def generate_real_measurements(
     # Generate WHZ from height and weight
     whz_0 = calculate_whz(pd.Series(heights_0), pd.Series(weights_0), genders, whz_params)
     percent_wasting = (whz_0 < -2).mean() * 100
-    print(percent_wasting)
+    print('{0}% wasting'.format(percent_wasting))
 
     records = []
     real_measurements = pd.DataFrame({
@@ -119,36 +119,38 @@ def generate_real_measurements(
 
     # Plot age, haz, waz, whz, height and weight distributions if plot_distributions is True
     if plot_distributions:
-        plt.figure(figsize=(15, 10))
+        plt.figure(figsize=(12, 8), constrained_layout = True)
 
         plt.subplot(2, 3, 1)
-        sns.histplot(real_measurements['age'], bins=10, kde=True)
-        plt.title('Age Distribution')
+        sns.histplot(real_measurements['age']/365, bins=30, kde=True, color = 'lightgray')
+        plt.title('Age (years)')
 
         plt.subplot(2, 3, 2)
-        sns.histplot(real_measurements['haz'], bins=10, kde=True)
+        sns.histplot(real_measurements['haz'], bins=30, kde=True, color = 'paleturquoise')
         plt.title('HAZ Distribution')
 
         plt.subplot(2, 3, 3)
-        sns.histplot(real_measurements['waz'], bins=10, kde=True)
+        sns.histplot(real_measurements['waz'], bins=30, kde=True, color = 'lightsalmon')
         plt.title('WAZ Distribution')
 
         plt.subplot(2, 3, 4)
-        sns.histplot(real_measurements['height'], bins=10, kde=True)
-        plt.title('Height Distribution')
+        sns.histplot(real_measurements['height'], bins=30, kde=True, color = 'turquoise')
+        plt.title('Height (cm)')
 
         plt.subplot(2, 3, 5)
-        sns.histplot(real_measurements['weight'], bins=10, kde=True)
-        plt.title('Weight Distribution')
+        sns.histplot(real_measurements['weight'], bins=30, kde=True, color = 'salmon')
+        plt.title('Weight (kg)')
 
         plt.subplot(2, 3, 6)
-        sns.histplot(real_measurements['whz'], bins=10, kde=True)
+        sns.histplot(real_measurements['whz'], bins=30, kde=True, color = 'lightyellow')
         plt.title('WHZ Distribution')
 
         plt.tight_layout()
         plt.show()
 
     return real_measurements
+
+def generate_L0_distorted_measurements(
 
 def calculate_haz(height, age, sex, haz_params):
     """
