@@ -18,6 +18,7 @@ def generate_real_measurements(
     max_age,
     haz_params,
     waz_params,
+    whz_params,
     haz_mean_0 = None,
     haz_std_0 = None,
     waz_mean_0 = None,
@@ -43,11 +44,12 @@ def generate_real_measurements(
     # Assign genders
     num_girls = int(num_children * girl_ratio)
     num_boys = num_children - num_girls
-    genders = ['F'] * num_girls + ['M'] * num_boys
+    genders = [1] * num_boys + [2] * num_girls
     np.random.shuffle(genders)
 
     # Assign starting ages - uniform distribution between min and max age
-    start_ages = np.random.uniform(low=min_age, high=max_age, size=num_children)
+    start_ages = np.random.uniform(low=min_age, high=max_age, size=num_children).astype(int)
+    start_ages = pd.Series(start_ages)
 
     # Prepare time lags and timepoints
     time_lags = np.array(time_lags)
@@ -96,25 +98,26 @@ def generate_real_measurements(
         weights_0 = np.maximum(weights_0, min_weight)
     if max_weight is not None:
         weights_0 = np.minimum(weights_0, max_weight)
-    
-    records = []
-    for i in range(num_children):
-        child_id = f"child_{i}"
-        gender = genders[i]
-        age = start_ages[i]
-        height = heights_0[i]
-        weight = weights_0[i]
-        records.append({
-            'child_id': child_id,
-            'gender': gender,
-            'timepoint': tp,
-            'age': curr_age,
-            'height': height,
-            'weight': weight
-        })
-        real_measurements = pd.DataFrame(records)
 
-    # Plot age, haz, waz, height and weight distributions if plot_distributions is True
+    # Generate WHZ from height and weight
+    whz_0 = calculate_whz(pd.Series(heights_0), pd.Series(weights_0), genders, whz_params)
+    percent_wasting = (whz_0 < -2).mean() * 100
+    print(percent_wasting)
+
+    records = []
+    real_measurements = pd.DataFrame({
+    'child_id': [f"child_{i}" for i in range(num_children)],
+    'gender': genders,
+    # 'timepoint': [tp for _ in range(num_children)], # Uncomment if needed
+    'age': start_ages,
+    'height': heights_0,
+    'weight': weights_0,
+    'haz': haz_0,
+    'waz': waz_0,
+    'whz': whz_0
+})
+
+    # Plot age, haz, waz, whz, height and weight distributions if plot_distributions is True
     if plot_distributions:
         plt.figure(figsize=(15, 10))
 
@@ -137,6 +140,10 @@ def generate_real_measurements(
         plt.subplot(2, 3, 5)
         sns.histplot(real_measurements['weight'], bins=10, kde=True)
         plt.title('Weight Distribution')
+
+        plt.subplot(2, 3, 6)
+        sns.histplot(real_measurements['whz'], bins=10, kde=True)
+        plt.title('WHZ Distribution')
 
         plt.tight_layout()
         plt.show()
@@ -250,7 +257,12 @@ def calculate_whz(height, weight, sex, whz_params):
         raise ValueError("Input series must have the same length")
     
     # Get M, S, L values for the age and sex
-    m, s, l = get_msl(height, sex, whz_params, age_label = '__000003')
+    # Create a variable called height_adjusted in which each value from height_0 is replaced with the closest value from whz_params['__000003']
+    height_array = np.array(whz_params['__000003'])
+    print('Calculating adjusted heights')
+    height_adjusted = pd.Series(height_array[np.abs(height_array[:, None] - height.values).argmin(axis=0)]) 
+    print('Adjusted heights calculated')
+    m, s, l = get_msl(pd.Series(height_adjusted), sex, whz_params, age_label = '__000003')
     whz = get_anthro_zscore(weight.dropna(), m, s, l)
     return whz
 
@@ -326,8 +338,8 @@ def get_msl(age, sex, params, age_label = '_agedays', sex_label = '__000001'):
     }
 
     for idx, i in tqdm(enumerate(age.dropna().index)):
-        sex_i = sex[i]
-        age_i = age[i]
+        sex_i = np.array(sex)[idx]
+        age_i = np.array(age)[idx]
         m[idx] = lookup_m[sex_i].get(age_i, np.nan)
         s[idx] = lookup_s[sex_i].get(age_i, np.nan)
         l[idx] = lookup_l[sex_i].get(age_i, np.nan)
