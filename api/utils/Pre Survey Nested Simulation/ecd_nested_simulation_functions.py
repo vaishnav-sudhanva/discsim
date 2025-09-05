@@ -70,8 +70,7 @@ def generate_real_measurements(
     elif percent_stunting is not None:
         # If percent_stunting is provided, use it to calculate haz_mean_0, assuming standard deviation of 1. 
         # Percent stunting is the percentile of the distribution that is less than two standard deviations from the mean, i.e. < -2.
-        percent_stunting = percent_stunting / 100  # Convert to fraction
-        haz_mean_0 = -2 - norm.ppf(percent_stunting)
+        haz_mean_0 = -2 - norm.ppf(percent_stunting/100)
         haz_0 = np.random.normal(loc=haz_mean_0, scale=1, size=num_children)
 
     # Initial weights
@@ -86,8 +85,7 @@ def generate_real_measurements(
     elif percent_underweight is not None:
         # If percent_underweight is provided, use it to calculate waz_mean_0, assuming standard deviation of 1. 
         # Percent underweight is the percentile of the distribution that is less than two standard deviations from the mean, i.e. < -2.
-        percent_underweight = percent_underweight / 100  # Convert to fraction
-        waz_mean_0 = -2 - norm.ppf(percent_underweight)
+        waz_mean_0 = -2 - norm.ppf(percent_underweight/100)
         waz_0 = np.random.normal(loc=waz_mean_0, scale=1, size=num_children)
 
     # Generate height and weight from age, haz and waz, and haz_params and waz_params
@@ -112,51 +110,55 @@ def generate_real_measurements(
     print('{0}% wasting'.format(percent_wasting))
 
     records = []
-    real_measurements = pd.DataFrame({
-    'child_id': [f"child_{i}" for i in range(num_children)],
-    'gender': genders,
-    # 'timepoint': [tp for _ in range(num_children)], # Uncomment if needed
-    'age': start_ages,
-    'height': heights_0,
-    'weight': weights_0,
-    'loh': loh,
-    'haz': haz_0,
-    'waz': waz_0,
-    'whz': whz_0,
-    'percent_stunting': percent_stunting,
-    'percent_underweight': percent_underweight,
-    'percent_wasting': percent_wasting
-    
-    })
+    real_measurements = {
+        'data': pd.DataFrame({
+            'child_id': [f"child_{i}" for i in range(num_children)],
+            'gender': genders,
+            # 'timepoint': [tp for _ in range(num_children)], # Uncomment if needed
+            'age': start_ages,
+            'height': heights_0,
+            'weight': weights_0,
+            'loh': loh,
+            'haz': haz_0,
+            'waz': waz_0,
+            'whz': whz_0,
+        }),
+        'metadata': {
+            'percent_stunting': percent_stunting,
+            'percent_underweight': percent_underweight,
+            'percent_wasting': percent_wasting
+        }
+
+    }
     
     # Plot age, haz, waz, whz, height and weight distributions if plot_distributions is True
     if plot_distributions:
         plt.figure(figsize=figsize, constrained_layout = True)
 
         plt.subplot(2, 3, 1)
-        sns.histplot(real_measurements['age']/365, bins=30, kde=True, color = 'lightgray')
+        sns.histplot(real_measurements['data']['age']/365, bins=30, kde=True, color = 'lightgray')
         plt.title('Age (years)')
 
         plt.subplot(2, 3, 2)
-        sns.histplot(real_measurements['haz'], bins=30, kde=True, color = 'paleturquoise')
+        sns.histplot(real_measurements['data']['haz'], bins=30, kde=True, color = 'paleturquoise')
         plt.title('HAZ Distribution')
 
         plt.subplot(2, 3, 3)
-        sns.histplot(real_measurements['waz'], bins=30, kde=True, color = 'lightsalmon')
+        sns.histplot(real_measurements['data']['waz'], bins=30, kde=True, color = 'lightsalmon')
         plt.title('WAZ Distribution')
 
         plt.subplot(2, 3, 4)
-        sns.histplot(real_measurements['height'], bins=30, kde=True, color = 'turquoise')
+        sns.histplot(real_measurements['data']['height'], bins=30, kde=True, color = 'turquoise')
         plt.xlim([40, 140])
         plt.title('Height (cm)')
 
         plt.subplot(2, 3, 5)
-        sns.histplot(real_measurements['weight'], bins=30, kde=True, color = 'salmon')
+        sns.histplot(real_measurements['data']['weight'], bins=30, kde=True, color = 'salmon')
         plt.xlim([0, 30])
         plt.title('Weight (kg)')
 
         plt.subplot(2, 3, 6)
-        sns.histplot(real_measurements['whz'], bins=30, kde=True, color = 'lightyellow')
+        sns.histplot(real_measurements['data']['whz'], bins=30, kde=True, color = 'lightyellow')
         plt.title('WHZ Distribution')
 
         plt.tight_layout()
@@ -166,11 +168,17 @@ def generate_real_measurements(
 
 def generate_L0_distorted_measurements(
         real_measurements, 
+        haz_params,
+        waz_params,
+        whz_params_lying,
+        whz_params_standing,
         percent_under_reporting_stunting = None,
         percent_under_reporting_underweight = None,
         percent_under_reporting_wasting = None,
         reporting_threshold = -2,
-        n_bins = 10,
+        bunch_factor_haz = 0.05,
+        bunch_factor_waz = 0.05,
+        bunch_factor_whz = 0.05
         ):
 
     """
@@ -194,29 +202,100 @@ def generate_L0_distorted_measurements(
     # Apply under-reporting for stunting and underweight if provided
     if percent_under_reporting_stunting is not None and percent_under_reporting_underweight is not None:
         # Under-reporting for stunting
-        stunted_mask = distorted_measurements['haz'] < reporting_threshold
-        num_stunted = stunted_mask.sum()
-        num_to_report_as_non_stunted = int(num_stunted * percent_under_reporting_stunting / 100)
+        distorted_measurements['data']['haz'] = generate_bunched_data(threshold=reporting_threshold,
+                                                               original_data=real_measurements['data']['haz'],
+                                                               percent_below_threshold_original=real_measurements['metadata']['percent_stunting'],
+                                                               percent_below_threshold_bunched=real_measurements['metadata']['percent_stunting'] - percent_under_reporting_stunting,
+                                                               bunch_factor=bunch_factor_haz)
+        # Under-reporting for underweight
+        distorted_measurements['data']['waz'] = generate_bunched_data(threshold=reporting_threshold,
+                                                               original_data=distorted_measurements['data']['waz'],
+                                                               percent_below_threshold_original=real_measurements['metadata']['percent_underweight'],
+                                                               percent_below_threshold_bunched=real_measurements['metadata']['percent_underweight'] - percent_under_reporting_underweight,
+                                                               bunch_factor=bunch_factor_waz)
+        
+        # Calculate distorted height and weight based on distorted HAZ and WAZ
+        distorted_measurements['data']['height'] = height_from_haz(distorted_measurements['data']['haz'], real_measurements['data']['age'],
+                                                           real_measurements['data']['gender'], haz_params)
+        distorted_measurements['data']['weight'] = weight_from_waz(distorted_measurements['data']['waz'], real_measurements['data']['age'],
+                                                           real_measurements['data']['gender'], waz_params)
 
-        if num_to_report_as_non_stunted > 0:
-            
-            stunted_haz_values = distorted_measurements.loc[stunted_mask, 'haz']
-            bins = np.linspace(stunted_haz_values.min(), reporting_threshold, n_bins + 1)
-            bin_indices = np.digitize(stunted_haz_values, bins) - 1
-            
-            # Create bins above the reporting threshold to which we can move the selected children
-            bins_above_threshold = np.linspace(reporting_threshold, np.max(distorted_measurements['haz']), n_bins + 1)
+        # Calculate distorted WHZ from distorted height and weight
+        distorted_measurements['data']['whz'] = calculate_whz(distorted_measurements['data']['height'], distorted_measurements['data']['weight'],
+                                                      distorted_measurements['data']['gender'], real_measurements['data']['loh'],
+                                                      whz_params_standing, whz_params_lying)
+    
+    # Apply under-reporting for wasting if provided
+    elif percent_under_reporting_wasting is not None:
+        # Under-reporting for wasting
+        distorted_measurements['data']['whz'] = generate_bunched_data(threshold=reporting_threshold,
+                                                               original_data=distorted_measurements['data']['whz'],
+                                                               percent_below_threshold_original=real_measurements['metadata']['percent_wasting'],
+                                                               percent_below_threshold_bunched=real_measurements['metadata']['percent_wasting'] - percent_under_reporting_wasting,
+                                                               bunch_factor=bunch_factor_whz)
+        
+        # Calculate distorted weight from distorted WHZ, assuming height remains un-distorted
+        distorted_measurements['data']['weight'] = weight_from_whz(distorted_measurements['data']['whz'], real_measurements['data']['age'],
+                                                           real_measurements['data']['gender'], whz_params_lying, whz_params_standing)
 
-            # To simulate bunching at the threhsold, assign decreasing weights to each bin above the threshold
-            bin_weights = np.linspace(1, 0.1, n_bins)
+        # Calculate distorted WAZ from distorted weight
+        distorted_measurements['data']['waz'] = calculate_waz(distorted_measurements['data']['weight'], real_measurements['data']['age'],
+                                                       real_measurements['data']['gender'], waz_params)
+        
+    # Return distorted data
+    return distorted_measurements
 
-            # In each bin below the threshold, select percent_under_reporting_stunting% of the children to be reported as non-stunted 
-            # and change their haz value to a bin above the reporting threshold (-2). Choose the bin above the threshold based on the weights defined above.
-                     
+def generate_bunched_data(threshold, original_data, percent_below_threshold_original, percent_below_threshold_bunched,
+                          bunch_factor = 0.05, bin_size = 0.1):
+    """
+    Distort the original data by applying a bunching effect around the threshold.
+    Args:
+        threshold (float): The threshold value for bunching.
+        original_data (pd.Series): The original data to be distorted.
+        percent_below_threshold_original (float): The percentage of data below the threshold in the original data.
+        percent_below_threshold_bunched (float): The desired percentage of data below the threshold in the bunched data.
+        bunch_factor (float): Float between 0 and 1 (exclusive) which gives the intensity of bunching (closer to 1 means more bunching).
+        bin_size (float): The size of the bins for bunching.
+    """
+    bunched_data = original_data.copy()
+    
+    # Divide the range of the data into bins of size bin_size
+    bins = np.arange(original_data.min(), original_data.max() + bin_size, bin_size)
+    binned_data = pd.cut(original_data, bins=bins, include_lowest=True)
 
+    # Calculate percentage of points to be shifted above threshold from each bin
+    percent_shift = 100 * (1 - percent_below_threshold_bunched/percent_below_threshold_original)
+    
+    # In each bin below the threshold, choose a random subset of points (percent_shift % from each bin)
+    shift_indices = []
+    for bin in binned_data.cat.categories:
+        if bin.right <= threshold:
+            # Find the number of data points in this bin
+            n_points = (binned_data == bin).sum()
+            # Calculate the number of points to shift
+            n_shift = int(n_points * percent_shift/100)
+            # Choose random points to shift and get their indices in bunched_data
+            shift_points = bunched_data[binned_data == bin].sample(n=n_shift, replace=False)
+            shift_indices.extend(shift_points.index)
 
-            distorted_measurements.loc[selected_indices, 'haz'] = reporting_threshold + 0.01
+    # Assign exponentially decreasing probabilities to each bin above the threshold based on the bunch factor
+    probabilities = []
+    bins_above_threshold = [b for b in binned_data.cat.categories if b.left > threshold]
+    for i, bin in enumerate(bins_above_threshold):
+        prob = (1 - bunch_factor) ** i
+        probabilities.append(prob)
 
+    # Normalize probabilities to sum to 1
+    probabilities = np.array(probabilities)
+    probabilities /= probabilities.sum()
+
+    # For each point to be shifted, choose a bin above the threshold based on the probabilities
+    for idx in shift_indices:
+        chosen_bin = np.random.choice(bins_above_threshold, p=probabilities)
+        # Choose a random point from the chosen bin and assign it to the bunched data
+        bunched_data.loc[idx] = np.random.uniform(chosen_bin.left, chosen_bin.right)
+
+    return bunched_data
 
 def calculate_haz(height, age, sex, haz_params):
     """
@@ -306,6 +385,50 @@ def weight_from_waz(waz, age, sex, waz_params):
     # Get M, S, L values for the age and sex
     m, s, l = get_msl(age, sex, waz_params)
     weight = invert_anthro_zscore(waz, m, s, l)
+    return weight
+
+def weight_from_whz(whz, height, sex, loh, whz_params_lying, whz_params_standing):
+    """
+    Calculate weight from Weight-for-Height Z-scores (WHZ) using the WHO growth standards.
+
+    Args:
+        whz (pd.Series): WHZ scores.
+        height (pd.Series): Height measurements.
+        sex (pd.Series): Sex (gender) of the children.
+        whz_params (pd.DataFrame): WHZ parameters from WHO growth standards.
+
+    Returns:
+        pd.Series: Weight measurements.
+    """
+    # Make sure whz, height, and sex are the same length, else throw an error
+    if not (len(whz) == len(height) == len(sex) == len(loh)):
+        raise ValueError("Input series must have the same length")
+    
+    # Split height, whz and sex into two groups based on loh
+    height_0 = height[loh == 1]  # Lying height
+    whz_0 = whz[loh == 1]  # WHZ corresponding to lying height
+    sex_0 = sex[loh == 1]  # Sex corresponding to lying height
+
+    height_1 = height[loh == 2]  # Standing height
+    whz_1 = whz[loh == 2]  # WHZ corresponding to standing height
+    sex_1 = sex[loh == 2]  # Sex corresponding to standing height
+
+    # Get M, S, L values for the height and sex for lying height
+    # Create a variable called height_adjusted in which each value from height_0 is replaced with the closest value from whz_params_lying['__000002']
+    height_array = np.array(whz_params_lying['__000002'])
+    height_adjusted = pd.Series(height_array[np.abs(height_array[:, None] - height_0.values).argmin(axis=0)]) 
+    m, s, l = get_msl(pd.Series(height_adjusted), sex_0, whz_params_lying, age_label = '__000002')
+    weight_0 = invert_anthro_zscore(whz_0, m, s, l)
+
+    # Get M, S, L values for the height and sex for standing height
+    # Create a variable called height_adjusted in which each value from height_1 is replaced with the closest value from whz_params_standing['__000003']
+    height_array = np.array(whz_params_standing['__000003'])
+    height_adjusted = pd.Series(height_array[np.abs(height_array[:, None] - height_1.values).argmin(axis=0)]) 
+    m, s, l = get_msl(pd.Series(height_adjusted), sex_1, whz_params_standing, age_label = '__000003')
+    weight_1 = invert_anthro_zscore(whz_1, m, s, l)
+
+    # Combine the results
+    weight = pd.concat([weight_0, weight_1]).sort_index()
     return weight
 
 def calculate_whz(height, weight, sex, loh, whz_params_lying, whz_params_standing):
