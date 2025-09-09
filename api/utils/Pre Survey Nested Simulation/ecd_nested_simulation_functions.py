@@ -31,7 +31,7 @@ def generate_real_measurements(
     min_weight=None,
     max_weight=None,
     plot_distributions = False,
-    figsize = [10, 10]
+    figsize = [10, 8]
     
 ):
     """
@@ -178,7 +178,9 @@ def generate_L0_distorted_measurements(
         reporting_threshold = -2,
         bunch_factor_haz = 0.05,
         bunch_factor_waz = 0.05,
-        bunch_factor_whz = 0.05
+        bunch_factor_whz = 0.05,
+        bin_size = 0.1,
+        make_plots = False, figsize = [15, 8]
         ):
 
     """
@@ -197,23 +199,33 @@ def generate_L0_distorted_measurements(
     if (percent_under_reporting_stunting is None or percent_under_reporting_underweight is None) and percent_under_reporting_wasting is None:
         raise ValueError("Percent under-reporting must be provided for either stunting and underewight, or wasting.")
 
-    distorted_measurements = real_measurements.copy()
+    distorted_measurements = {
+        'data': real_measurements['data'].copy(deep=True),
+        'metadata': real_measurements['metadata'].copy()
+    }
 
     # Apply under-reporting for stunting and underweight if provided
     if percent_under_reporting_stunting is not None and percent_under_reporting_underweight is not None:
+        
+        # Throw an error if percent under-reporting for stunting or underweight exceeds the actual percent stunting or underweight
+        if percent_under_reporting_stunting > real_measurements['metadata']['percent_stunting']:
+            raise ValueError("Percent under-reporting for stunting exceeds actual percent stunting.")
+        if percent_under_reporting_underweight > real_measurements['metadata']['percent_underweight']:
+            raise ValueError("Percent under-reporting for underweight exceeds actual percent underweight.")
+
         # Under-reporting for stunting
         distorted_measurements['data']['haz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=real_measurements['data']['haz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_stunting'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_stunting'] - percent_under_reporting_stunting,
-                                                               bunch_factor=bunch_factor_haz)
+                                                               bunch_factor=bunch_factor_haz, bin_size=bin_size)
         # Under-reporting for underweight
         distorted_measurements['data']['waz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=distorted_measurements['data']['waz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_underweight'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_underweight'] - percent_under_reporting_underweight,
-                                                               bunch_factor=bunch_factor_waz)
-        
+                                                               bunch_factor=bunch_factor_waz, bin_size=bin_size)
+
         # Calculate distorted height and weight based on distorted HAZ and WAZ
         distorted_measurements['data']['height'] = height_from_haz(distorted_measurements['data']['haz'], real_measurements['data']['age'],
                                                            real_measurements['data']['gender'], haz_params)
@@ -223,17 +235,21 @@ def generate_L0_distorted_measurements(
         # Calculate distorted WHZ from distorted height and weight
         distorted_measurements['data']['whz'] = calculate_whz(distorted_measurements['data']['height'], distorted_measurements['data']['weight'],
                                                       distorted_measurements['data']['gender'], real_measurements['data']['loh'],
-                                                      whz_params_standing, whz_params_lying)
+                                                      whz_params_lying, whz_params_standing)
     
     # Apply under-reporting for wasting if provided
     elif percent_under_reporting_wasting is not None:
+        # Throw an error if percent under-reporting for wasting exceeds the actual percent wasting
+        if percent_under_reporting_wasting > real_measurements['metadata']['percent_wasting']:
+            raise ValueError("Percent under-reporting for wasting exceeds actual percent wasting.")
+        
         # Under-reporting for wasting
         distorted_measurements['data']['whz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=distorted_measurements['data']['whz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_wasting'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_wasting'] - percent_under_reporting_wasting,
-                                                               bunch_factor=bunch_factor_whz)
-        
+                                                               bunch_factor=bunch_factor_whz, bin_size=bin_size)
+
         # Calculate distorted weight from distorted WHZ, assuming height remains un-distorted
         distorted_measurements['data']['weight'] = weight_from_whz(distorted_measurements['data']['whz'], real_measurements['data']['age'],
                                                            real_measurements['data']['gender'], whz_params_lying, whz_params_standing)
@@ -242,8 +258,129 @@ def generate_L0_distorted_measurements(
         distorted_measurements['data']['waz'] = calculate_waz(distorted_measurements['data']['weight'], real_measurements['data']['age'],
                                                        real_measurements['data']['gender'], waz_params)
         
+    # If make_plots is true, plot distributions of height, weight, haz, waz and whz for real and distorted data, and the differences
+    if make_plots:
+
+        plt.figure(figsize=figsize, constrained_layout=True)
+
+        # Improved color palette and outlines for clarity
+        real_color = "#94979a"        # blue
+        real_edge = "#0d2c47"
+        distorted_color = "#a226c1"   # orange
+        distorted_edge = "#83028f"
+        alpha_real = 0.8
+        alpha_distorted = 0.3
+
+        # Row 1: Overlapping histograms for real and distorted measurements
+        plt.subplot(2, 5, 1)
+        sns.histplot(real_measurements['data']['height'], bins=30, kde=False, color=real_color, 
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+        sns.histplot(distorted_measurements['data']['height'], bins=30, kde=False, color=distorted_color, 
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
+        plt.xlabel('Height (cm)')
+        plt.title('Height')
+        plt.legend()
+
+        plt.subplot(2, 5, 2)
+        sns.histplot(real_measurements['data']['weight'], bins=30, kde=False, color=real_color, 
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+        sns.histplot(distorted_measurements['data']['weight'], bins=30, kde=False, color=distorted_color, 
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
+        plt.xlabel('Weight (kg)')
+        plt.title('Weight')
+        plt.legend()
+
+        min_haz = min(real_measurements['data']['haz'].min(), distorted_measurements['data']['haz'].min())
+        max_haz = max(real_measurements['data']['haz'].max(), distorted_measurements['data']['haz'].max())
+        bins_haz = np.arange(min_haz, max_haz, bin_size)
+        plt.subplot(2, 5, 3)
+        sns.histplot(real_measurements['data']['haz'], bins=bins_haz, kde=False, color=real_color, 
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+        sns.histplot(distorted_measurements['data']['haz'], bins=bins_haz, kde=False, color=distorted_color, 
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.xlabel('HAZ')
+        plt.title('HAZ')
+        plt.legend()
+
+        min_waz = min(real_measurements['data']['waz'].min(), distorted_measurements['data']['waz'].min())
+        max_waz = max(real_measurements['data']['waz'].max(), distorted_measurements['data']['waz'].max())
+        bins_waz = np.arange(min_waz, max_waz, bin_size)
+        plt.subplot(2, 5, 4)
+        sns.histplot(real_measurements['data']['waz'], bins=bins_waz, kde=False, color=real_color, 
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+        sns.histplot(distorted_measurements['data']['waz'], bins=bins_waz, kde=False, color=distorted_color, 
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.xlabel('WAZ')
+        plt.title('WAZ')
+        plt.legend()
+
+        min_whz = min(real_measurements['data']['whz'].min(), distorted_measurements['data']['whz'].min())
+        max_whz = max(real_measurements['data']['whz'].max(), distorted_measurements['data']['whz'].max())
+        bins_whz = np.arange(min_whz, max_whz, bin_size)
+        plt.subplot(2, 5, 5)
+        sns.histplot(real_measurements['data']['whz'], bins=bins_whz, kde=False, color=real_color, 
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+        sns.histplot(distorted_measurements['data']['whz'], bins=bins_whz, kde=False, color=distorted_color, 
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.xlabel('WHZ')
+        plt.title('WHZ')
+        plt.legend()
+
+        # Row 2: Differences
+        plt.subplot(2, 5, 6)
+        sns.scatterplot(x=real_measurements['data']['height'],
+                        y=distorted_measurements['data']['height'] - real_measurements['data']['height'],
+                        color='k', marker = '.', alpha = 0.5)
+        plt.xlabel('Real height (cm)')
+        plt.ylabel('Distorted - Real')
+        plt.title('Height Diff')
+
+        plt.subplot(2, 5, 7)
+        sns.scatterplot(x=real_measurements['data']['weight'],
+                        y=distorted_measurements['data']['weight'] - real_measurements['data']['weight'],
+                        color='k', marker = '.', alpha = 0.5)
+        plt.xlabel('Real weight (kg)')
+        plt.ylabel('Distorted - Real')
+        plt.title('Weight Diff')
+
+        plt.subplot(2, 5, 8)
+        freq_real, _ = np.histogram(real_measurements['data']['haz'], bins=bins_haz, density=False)
+        freq_distorted, _ = np.histogram(distorted_measurements['data']['haz'], bins=bins_haz, density=False)
+        plt.bar(x=bins_haz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        plt.xlabel('HAZ')
+        plt.ylabel('Distorted - Real')
+        plt.axhline(0, color='black', linestyle='--')
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.title('HAZ Diff')
+
+        plt.subplot(2, 5, 9)
+        freq_real, _ = np.histogram(real_measurements['data']['waz'], bins=bins_waz, density=False)
+        freq_distorted, _ = np.histogram(distorted_measurements['data']['waz'], bins=bins_waz, density=False)
+        plt.bar(x=bins_waz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        plt.xlabel('WAZ')
+        plt.ylabel('Distorted - Real')
+        plt.axhline(0, color='black', linestyle='--')
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.title('WAZ Diff')
+
+        plt.subplot(2, 5, 10)
+        freq_real, _ = np.histogram(real_measurements['data']['whz'], bins=bins_whz, density=False)
+        freq_distorted, _ = np.histogram(distorted_measurements['data']['whz'], bins=bins_whz, density=False)
+        plt.bar(x=bins_whz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        plt.xlabel('WHZ')
+        plt.ylabel('Distorted - Real')
+        plt.axhline(0, color='black', linestyle='--')
+        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
+        plt.title('WHZ Diff')
+
+        plt.tight_layout()
+        plt.show()
+
     # Return distorted data
-    return distorted_measurements
+    return distorted_measurements,
 
 def generate_bunched_data(threshold, original_data, percent_below_threshold_original, percent_below_threshold_bunched,
                           bunch_factor = 0.05, bin_size = 0.1):
@@ -257,7 +394,7 @@ def generate_bunched_data(threshold, original_data, percent_below_threshold_orig
         bunch_factor (float): Float between 0 and 1 (exclusive) which gives the intensity of bunching (closer to 1 means more bunching).
         bin_size (float): The size of the bins for bunching.
     """
-    bunched_data = original_data.copy()
+    bunched_data = original_data.copy(deep = True)
     
     # Divide the range of the data into bins of size bin_size
     bins = np.arange(original_data.min(), original_data.max() + bin_size, bin_size)
