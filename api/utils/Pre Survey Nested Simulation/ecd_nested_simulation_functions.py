@@ -180,6 +180,10 @@ def generate_L0_distorted_measurements(
         bunch_factor_waz = 0.05,
         bunch_factor_whz = 0.05,
         bin_size = 0.1,
+        error_mean_height = 0,
+        error_sd_height = 1,
+        error_mean_weight = 0,
+        error_sd_weight = 0.1,
         make_plots = False, figsize = [15, 8]
         ):
 
@@ -258,6 +262,21 @@ def generate_L0_distorted_measurements(
         distorted_measurements['data']['waz'] = calculate_waz(distorted_measurements['data']['weight'], real_measurements['data']['age'],
                                                        real_measurements['data']['gender'], waz_params)
         
+    # Add measurement error to height and weight
+    distorted_measurements['data']['height'] = add_measurement_error(distorted_measurements['data']['height'], 
+                                                                     error_mean=error_mean_height, error_sd=error_sd_height)
+    distorted_measurements['data']['weight'] = add_measurement_error(distorted_measurements['data']['weight'], 
+                                                                     error_mean=error_mean_weight, error_sd=error_sd_weight)
+
+    # Re-calculate HAZ, WAZ and WHZ from distorted height and weight with measurement error
+    distorted_measurements['data']['haz'] = calculate_haz(distorted_measurements['data']['height'], real_measurements['data']['age'],
+                                                 real_measurements['data']['gender'], haz_params)
+    distorted_measurements['data']['waz'] = calculate_waz(distorted_measurements['data']['weight'], real_measurements['data']['age'],
+                                                 real_measurements['data']['gender'], waz_params)
+    distorted_measurements['data']['whz'] = calculate_whz(distorted_measurements['data']['height'], distorted_measurements['data']['weight'],
+                                                 distorted_measurements['data']['gender'], distorted_measurements['data']['loh'],
+                                                 whz_params_lying, whz_params_standing)
+
     # If make_plots is true, plot distributions of height, weight, haz, waz and whz for real and distorted data, and the differences
     if make_plots:
 
@@ -433,6 +452,24 @@ def generate_bunched_data(threshold, original_data, percent_below_threshold_orig
         bunched_data.loc[idx] = np.random.uniform(chosen_bin.left, chosen_bin.right)
 
     return bunched_data
+
+def add_measurement_error(data, error_mean=0.5, error_sd=0.1):
+    """
+    Add random measurement error to height and weight measurements.
+
+    Args:
+        data (pd.DataFrame)
+        error_mean (float): Mean of the normal distribution for measurement error.
+        error_sd (float): Standard deviation of the normal distribution for measurement error.
+
+    Returns:
+        pd.DataFrame: DataFrame with added measurement error.
+    """
+    data_with_error = data.copy(deep=True)
+    error = np.random.normal(loc=error_mean, scale=error_sd, size=len(data))
+    data_with_error += error
+    
+    return data_with_error
 
 def calculate_haz(height, age, sex, haz_params):
     """
@@ -647,6 +684,7 @@ def invert_anthro_zscore(z, m, s, l):
     return y
 
 def get_msl(age, sex, params, age_label = '_agedays', sex_label = '__000001'):
+
     """
     Get M, S, L values for a specific age and sex from the WHO growth standards.
 
