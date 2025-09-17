@@ -280,7 +280,7 @@ def generate_L0_distorted_measurements(
     # If make_plots is true, plot distributions of height, weight, haz, waz and whz for real and distorted data, and the differences
     if make_plots:
 
-        plt.figure(figsize=figsize, constrained_layout=True, sharex = 'col', sharey = 'row')
+        fig, axs = plt.subplots(nrows = 2, ncols = 5, figsize=figsize, constrained_layout=True)
 
         # Improved color palette and outlines for clarity
         real_color = "#94979a"        # blue
@@ -291,109 +291,126 @@ def generate_L0_distorted_measurements(
         alpha_distorted = 0.3
 
         # Row 1: Overlapping histograms for real and distorted measurements
-        plt.subplot(2, 5, 1)
+
+        # Height
         sns.histplot(real_measurements['data']['height'], bins=30, kde=False, color=real_color, 
-                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, ax=axs[0, 0])
         sns.histplot(distorted_measurements['data']['height'], bins=30, kde=False, color=distorted_color, 
-                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
-        plt.xlabel('Height (cm)')
-        plt.title('Height')
-        plt.legend()
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, ax=axs[0, 0])
+        axs[0, 0].set_xlabel('Height (cm)')
+        axs[0, 0].set_title('Height')
+        axs[0, 0].legend()
 
-        plt.subplot(2, 5, 2)
+        # Weight
+        axs[0, 1]
         sns.histplot(real_measurements['data']['weight'], bins=30, kde=False, color=real_color, 
-                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, ax=axs[0, 1])
         sns.histplot(distorted_measurements['data']['weight'], bins=30, kde=False, color=distorted_color, 
-                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
-        plt.xlabel('Weight (kg)')
-        plt.title('Weight')
-        plt.legend()
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, ax=axs[0, 1])
+        axs[0, 1].set_xlabel('Weight (kg)')
+        axs[0, 1].set_title('Weight')
+        axs[0, 1].legend()
 
+        # HAZ
+        axs[0, 2]
         min_haz = min(real_measurements['data']['haz'].min(), distorted_measurements['data']['haz'].min())
         max_haz = max(real_measurements['data']['haz'].max(), distorted_measurements['data']['haz'].max())
         bins_haz = np.arange(min_haz, max_haz, bin_size)
-        plt.subplot(2, 5, 3)
+        #axs[0, 2].hist(real_measurements['data']['haz'], bins=bins_haz, color=real_color, alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, label='Real')
+        #axs[0, 2].hist(distorted_measurements['data']['haz'], bins=bins_haz, color=distorted_color, alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, label='Distorted')
         sns.histplot(real_measurements['data']['haz'], bins=bins_haz, kde=False, color=real_color, 
-                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, ax=axs[0, 2])
         sns.histplot(distorted_measurements['data']['haz'], bins=bins_haz, kde=False, color=distorted_color, 
-                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.xlabel('HAZ')
-        plt.title('HAZ')
-        plt.legend()
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, ax=axs[0, 2])
+        axs[0, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[0, 2].set_xlabel('HAZ')
+        axs[0, 2].set_title('HAZ')
+        axs[0, 2].legend()
 
+        # WAZ
+        axs[0, 3].sharey(axs[0, 2])
         min_waz = min(real_measurements['data']['waz'].min(), distorted_measurements['data']['waz'].min())
         max_waz = max(real_measurements['data']['waz'].max(), distorted_measurements['data']['waz'].max())
         bins_waz = np.arange(min_waz, max_waz, bin_size)
-        plt.subplot(2, 5, 4)
+        #axs[0, 3].hist(real_measurements['data']['waz'], bins=bins_waz, color=real_color, alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, label='Real')
         sns.histplot(real_measurements['data']['waz'], bins=bins_waz, kde=False, color=real_color, 
-                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, ax=axs[0, 3])
         sns.histplot(distorted_measurements['data']['waz'], bins=bins_waz, kde=False, color=distorted_color, 
-                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.xlabel('WAZ')
-        plt.title('WAZ')
-        plt.legend()
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, ax=axs[0, 3])
+        axs[0, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[0, 3].set_xlabel('WAZ')
+        axs[0, 3].set_title('WAZ')
+        axs[0, 3].legend()
 
+        # WHZ
+        axs[0, 4].sharey(axs[0, 2])
         min_whz = min(real_measurements['data']['whz'].min(), distorted_measurements['data']['whz'].min())
         max_whz = max(real_measurements['data']['whz'].max(), distorted_measurements['data']['whz'].max())
         bins_whz = np.arange(min_whz, max_whz, bin_size)
-        plt.subplot(2, 5, 5)
+        #axs[0, 4].hist(real_measurements['data']['whz'], bins=bins_whz, color=real_color, alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, label='Real')
         sns.histplot(real_measurements['data']['whz'], bins=bins_whz, kde=False, color=real_color, 
-                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2)
-        sns.histplot(distorted_measurements['data']['whz'], bins=bins_whz, kde=False, color=distorted_color, 
-                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2)
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.xlabel('WHZ')
-        plt.title('WHZ')
-        plt.legend()
+                     label='Real', alpha=alpha_real, edgecolor=real_edge, linewidth=0.2, ax=axs[0, 4])
+        sns.histplot(distorted_measurements['data']['whz'], bins=bins_whz, kde=False, color=distorted_color,
+                     label='Distorted', alpha=alpha_distorted, edgecolor=distorted_edge, linewidth=0.2, ax=axs[0, 4])
+        axs[0, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[0, 4].set_xlabel('WHZ')
+        axs[0, 4].set_title('WHZ')
+        axs[0, 4].legend()
 
         # Row 2: Differences
-        plt.subplot(2, 5, 6)
-        sns.scatterplot(x=real_measurements['data']['height'],
-                        y=distorted_measurements['data']['height'] - real_measurements['data']['height'],
-                        color='k', marker = '.', alpha = 0.5)
-        plt.xlabel('Real height (cm)')
-        plt.ylabel('Distorted - Real')
-        plt.title('Height Diff')
 
-        plt.subplot(2, 5, 7)
-        sns.scatterplot(x=real_measurements['data']['weight'],
-                        y=distorted_measurements['data']['weight'] - real_measurements['data']['weight'],
-                        color='k', marker = '.', alpha = 0.5)
-        plt.xlabel('Real weight (kg)')
-        plt.ylabel('Distorted - Real')
-        plt.title('Weight Diff')
+        # Height difference scatter plot
+        axs[1, 0].sharex(axs[0, 0])
+        axs[1, 0].scatter(x=real_measurements['data']['height'],
+                          y=distorted_measurements['data']['height'] - real_measurements['data']['height'],
+                        color='k', marker = '.', alpha = 0.1)
+        axs[1, 0].set_xlabel('Real height (cm)')
+        axs[1, 0].set_ylabel('Distorted - Real height (cm)')
+        axs[1, 0].set_title('Height Diff')
 
-        plt.subplot(2, 5, 8)
+        # Weight difference scatter plot
+        axs[1, 1].sharex(axs[0, 1])
+        axs[1, 1].scatter(x=real_measurements['data']['weight'],
+                          y=distorted_measurements['data']['weight'] - real_measurements['data']['weight'],
+                          color='k', marker='.', alpha=0.1)
+        axs[1, 1].set_xlabel('Real weight (kg)')
+        axs[1, 1].set_ylabel('Distorted - Real weight (kg)')
+        axs[1, 1].set_title('Weight Diff')
+
+        # HAZ difference histogram
+        axs[1, 2].sharex(axs[0, 2])
         freq_real, _ = np.histogram(real_measurements['data']['haz'], bins=bins_haz, density=False)
         freq_distorted, _ = np.histogram(distorted_measurements['data']['haz'], bins=bins_haz, density=False)
-        plt.bar(x=bins_haz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_haz), color='gray', alpha=0.7)
-        plt.xlabel('HAZ')
-        plt.ylabel('Distorted - Real')
-        plt.axhline(0, color='black', linestyle='--')
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.title('HAZ Diff')
+        axs[1, 2].bar(x=bins_haz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[1, 2].set_xlabel('HAZ')
+        axs[1, 2].set_ylabel('Count: Distorted - Real')
+        axs[1, 2].axhline(0, color='black', linestyle='--')
+        axs[1, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 2].set_title('HAZ Diff')
 
-        plt.subplot(2, 5, 9)
+        # WAZ difference histogram
+        axs[1, 3].sharex(axs[0, 3])
+        axs[1, 3].sharey(axs[1, 2])
         freq_real, _ = np.histogram(real_measurements['data']['waz'], bins=bins_waz, density=False)
         freq_distorted, _ = np.histogram(distorted_measurements['data']['waz'], bins=bins_waz, density=False)
-        plt.bar(x=bins_waz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_waz), color='gray', alpha=0.7)
-        plt.xlabel('WAZ')
-        plt.ylabel('Distorted - Real')
-        plt.axhline(0, color='black', linestyle='--')
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.title('WAZ Diff')
+        axs[1, 3].bar(x=bins_waz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[1, 3].set_xlabel('WAZ')
+        axs[1, 3].set_ylabel('Count: Distorted - Real')
+        axs[1, 3].axhline(0, color='black', linestyle='--')
+        axs[1, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 3].set_title('WAZ Diff')
 
-        plt.subplot(2, 5, 10)
+        # WHZ difference histogram
+        axs[1, 4].sharex(axs[0, 4])
+        axs[1, 4].sharey(axs[1, 2])
         freq_real, _ = np.histogram(real_measurements['data']['whz'], bins=bins_whz, density=False)
         freq_distorted, _ = np.histogram(distorted_measurements['data']['whz'], bins=bins_whz, density=False)
-        plt.bar(x=bins_whz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
-        plt.xlabel('WHZ')
-        plt.ylabel('Distorted - Real')
-        plt.axhline(0, color='black', linestyle='--')
-        plt.axvline(x=reporting_threshold, color='red', linestyle='--')
-        plt.title('WHZ Diff')
+        axs[1, 4].bar(x=bins_whz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[1, 4].set_xlabel('WHZ')
+        axs[1, 4].set_ylabel('Count: Distorted - Real')
+        axs[1, 4].axhline(0, color='black', linestyle='--')
+        axs[1, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 4].set_title('WHZ Diff')
 
         plt.tight_layout()
         plt.show()
