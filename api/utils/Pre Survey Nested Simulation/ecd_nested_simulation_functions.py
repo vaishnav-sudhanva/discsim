@@ -280,7 +280,7 @@ def generate_L0_distorted_measurements(
     # If make_plots is true, plot distributions of height, weight, haz, waz and whz for real and distorted data, and the differences
     if make_plots:
 
-        plt.figure(figsize=figsize, constrained_layout=True)
+        plt.figure(figsize=figsize, constrained_layout=True, sharex = 'col', sharey = 'row')
 
         # Improved color palette and outlines for clarity
         real_color = "#94979a"        # blue
