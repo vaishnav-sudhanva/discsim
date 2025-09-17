@@ -418,6 +418,29 @@ def generate_L0_distorted_measurements(
     # Return distorted data
     return distorted_measurements,
 
+def generage_L1_distorted_measurements(
+        L0_distorted_measurements,
+        haz_params,
+        waz_params,
+        whz_params_lying,
+        whz_params_standing,
+        collusion_index,
+        error_mean_height = 0,
+        error_sd_height = 1,
+        error_mean_weight = 0,
+        error_sd_weight = 0.1,
+        make_plots = False, figsize = [15, 8]
+        ):  
+    """
+    Apply collusion-based distortions, and measurement error, to L0 distorted data to generate distorted L1 data.
+    Args:
+        L0_distorted_measurements (pd.DataFrame): Table with columns
+        collusion_index (float): Value between 0 and 1 indicating the level of collusion (0 = no collusion, 1 = perfect collusion).
+    Returns:
+        pd.DataFrame: Table with distorted measurements and reported status.
+    """
+    
+
 def generate_bunched_data(threshold, original_data, percent_below_threshold_original, percent_below_threshold_bunched,
                           bunch_factor = 0.05, bin_size = 0.1):
     """
