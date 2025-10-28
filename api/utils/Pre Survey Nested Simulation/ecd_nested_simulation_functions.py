@@ -4,6 +4,8 @@ from scipy.stats import norm
 from matplotlib import pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
+from disc_score import discrepancy_score
+
 
 def generate_real_measurements(
     num_children,
@@ -31,7 +33,8 @@ def generate_real_measurements(
     min_weight=None,
     max_weight=None,
     plot_distributions = False,
-    figsize = [10, 8]
+    figsize = [10, 8],
+    verbose = False
     
 ):
     """
@@ -107,7 +110,8 @@ def generate_real_measurements(
     # Generate WHZ from height and weight
     whz_0 = calculate_whz(pd.Series(heights_0), pd.Series(weights_0), pd.Series(genders), loh, whz_params_lying, whz_params_standing)
     percent_wasting = (whz_0 < -2).mean() * 100
-    print('{0}% wasting'.format(percent_wasting))
+    if verbose:
+        print('{0}% wasting'.format(percent_wasting))
 
     records = []
     real_measurements = {
@@ -441,6 +445,7 @@ def generate_L1_distorted_measurements(
         waz_params,
         whz_params_lying,
         whz_params_standing,
+        num_children_L1,
         percent_copy,
         collusion_index,
         error_mean_height = 0,
@@ -452,59 +457,88 @@ def generate_L1_distorted_measurements(
         bunch_factor_whz = 0.05,
         bin_size = 0.1,
         reporting_threshold = -2,
-        make_plots = False, figsize = [15, 8]
-        ):  
+        make_plots = False, 
+        figsize = [15, 8]
+        ):
     """
-    Apply collusion-based distortions, and measurement error, to L0 distorted data to generate distorted L1 data.
+    Apply collusion and copying distortions, and measurement error, to L0 distorted data to generate L1 distorted data.
     Args:
-        L0_distorted_measurements (pd.DataFrame): Table with columns
-        collusion_index (float): Value between 0 and 1 indicating the level of collusion (0 = no collusion, 1 = perfect collusion).
-    Returns:
-        pd.DataFrame: Table with distorted measurements and reported status.
-    """
-    distorted_measurements = {
-        'data': real_measurements['data'].copy(deep=True),
+        real_measurements (pd.DataFrame): Table with columns
+        L0_distorted_measurements (pd.DataFrame): Table with L0 distorted measurements.
+        num_children_L1 (int): Number of children to be measured at L1.
+        percent_copy (float): Percentage of children whose measurements are copied exactly from L0 to L
+        collusion_index (float): Index representing the level of collusion in the population.
+        error_mean_height (float): Mean of measurement error for height.
+        error_sd_height (float): Standard deviation of measurement error for height.
+        error_mean_weight (float): Mean of measurement error for weight.
+        error_sd_weight (float): Standard deviation of measurement error for weight.
+        Returns:
+        pd.DataFrame: Table with L1 distorted measurements.
+        """
+    
+    # Select random subset of children to be measured by L1
+    all_indices = real_measurements['data'].index
+
+    # Throw an error if num_children_L1 exceeds the total number of children in real_measurements
+    if num_children_L1 > len(all_indices):
+        raise ValueError("num_children_L1 exceeds the total number of children in real_measurements.")
+    L1_indices = np.random.choice(all_indices, size=num_children_L1, replace=False)
+    
+    # Create measurements dictionary with only selected children
+    real_subset_L1 = {
+        'data': real_measurements['data'].loc[L1_indices].copy(),
+        'metadata': real_measurements['metadata'].copy()
+    }
+    L0_subset_L1 = {
+        'data': L0_distorted_measurements['data'].loc[L1_indices].copy(),
         'metadata': L0_distorted_measurements['metadata'].copy()
     }
-
+    
+    # Generate L1 measurements for subset using existing logic
+    distorted_measurements = {
+        'data': real_subset_L1['data'].copy(deep=True),
+        'metadata': L0_subset_L1['metadata'].copy(),
+        'L1_indices': L1_indices
+    }
+    
     # Copying: choose a subset of children for which values are taken exactly from L0. Retain the indices so that no measurement error or collusion is applied to these children.
-    num_children = len(real_measurements['data'])
+    num_children = len(real_subset_L1['data'])
     num_copy = int(num_children * percent_copy / 100)
-    copy_indices = np.random.choice(real_measurements['data'].index, size=num_copy, replace=False)
+    copy_indices = np.random.choice(real_subset_L1['data'].index, size=num_copy, replace=False)
     distorted_measurements['data'].loc[copy_indices, 
-                                       ['height', 'weight', 'haz', 'waz', 'whz']] = L0_distorted_measurements['data'].loc[copy_indices, 
-                                                                                                                          ['height', 'weight', 'haz', 'waz', 'whz']]
+                                       ['height', 'weight', 'haz', 'waz', 'whz']] = L0_subset_L1['data'].loc[copy_indices, 
+                                                                                    ['height', 'weight', 'haz', 'waz', 'whz']]
 
     # Collusion: for the remaining children, apply collusion-based distortion
-    collude_indices = [i for i in real_measurements['data'].index if i not in copy_indices]
+    collude_indices = [i for i in real_subset_L1['data'].index if i not in copy_indices]
     num_collude = len(collude_indices)
 
     if num_collude > 0:
         # Calculate percentage of children to be under-reported based on collusion index, only if corresponding L0 values exist
-        percent_under_reporting_stunting = (collusion_index * L0_distorted_measurements['metadata']['percent_under_reporting_stunting'] 
-                                          if L0_distorted_measurements['metadata']['percent_under_reporting_stunting'] is not None else None)
-        percent_under_reporting_underweight = (collusion_index * L0_distorted_measurements['metadata']['percent_under_reporting_underweight']
-                                             if L0_distorted_measurements['metadata']['percent_under_reporting_underweight'] is not None else None)
-        percent_under_reporting_wasting = (collusion_index * L0_distorted_measurements['metadata']['percent_under_reporting_wasting']
-                                         if L0_distorted_measurements['metadata']['percent_under_reporting_wasting'] is not None else None)
+        percent_under_reporting_stunting = (collusion_index * L0_subset_L1['metadata']['percent_under_reporting_stunting'] 
+                                          if L0_subset_L1['metadata']['percent_under_reporting_stunting'] is not None else None)
+        percent_under_reporting_underweight = (collusion_index * L0_subset_L1['metadata']['percent_under_reporting_underweight']
+                                             if L0_subset_L1['metadata']['percent_under_reporting_underweight'] is not None else None)
+        percent_under_reporting_wasting = (collusion_index * L0_subset_L1['metadata']['percent_under_reporting_wasting']
+                                         if L0_subset_L1['metadata']['percent_under_reporting_wasting'] is not None else None)
 
         # Apply under-reporting for stunting and underweight if both are provided
         if percent_under_reporting_stunting is not None and percent_under_reporting_underweight is not None:
             # Under-reporting for stunting
             distorted_measurements['data'].loc[collude_indices, 'haz'] = generate_bunched_data(
                 threshold=-2,
-                original_data=real_measurements['data'].loc[collude_indices, 'haz'],
-                percent_below_threshold_original=(real_measurements['data'].loc[collude_indices, 'haz'] < -2).mean() * 100,
-                percent_below_threshold_bunched=(real_measurements['data'].loc[collude_indices, 'haz'] < -2).mean() * 100 - percent_under_reporting_stunting,
+                original_data=real_subset_L1['data'].loc[collude_indices, 'haz'],
+                percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'haz'] < -2).mean() * 100,
+                percent_below_threshold_bunched=(real_subset_L1['data'].loc[collude_indices, 'haz'] < -2).mean() * 100 - percent_under_reporting_stunting,
                 bunch_factor=bunch_factor_haz,
                 bin_size=bin_size
             )
             # Under-reporting for underweight
             distorted_measurements['data'].loc[collude_indices, 'waz'] = generate_bunched_data(
                 threshold=-2,
-                original_data=real_measurements['data'].loc[collude_indices, 'waz'],
-                percent_below_threshold_original=(real_measurements['data'].loc[collude_indices, 'waz'] < -2).mean() * 100,
-                percent_below_threshold_bunched=(real_measurements['data'].loc[collude_indices, 'waz'] < -2).mean() * 100 - percent_under_reporting_underweight,
+                original_data=real_subset_L1['data'].loc[collude_indices, 'waz'],
+                percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'waz'] < -2).mean() * 100,
+                percent_below_threshold_bunched=(real_subset_L1['data'].loc[collude_indices, 'waz'] < -2).mean() * 100 - percent_under_reporting_underweight,
                 bunch_factor=bunch_factor_waz,
                 bin_size=bin_size
             )
@@ -512,14 +546,14 @@ def generate_L1_distorted_measurements(
             # Calculate distorted height and weight based on distorted HAZ and WAZ
             distorted_measurements['data'].loc[collude_indices, 'height'] = height_from_haz(
                 distorted_measurements['data'].loc[collude_indices, 'haz'],
-                real_measurements['data'].loc[collude_indices, 'age'],
-                real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+                real_subset_L1['data'].loc[collude_indices, 'age'],
+                real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
                 haz_params
             )
             distorted_measurements['data'].loc[collude_indices, 'weight'] = weight_from_waz(
                 distorted_measurements['data'].loc[collude_indices, 'waz'],
-                real_measurements['data'].loc[collude_indices, 'age'],
-                real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+                real_subset_L1['data'].loc[collude_indices, 'age'],
+                real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
                 waz_params
             )   
 
@@ -538,9 +572,9 @@ def generate_L1_distorted_measurements(
             # Under-reporting for wasting
             distorted_measurements['data'].loc[collude_indices, 'whz'] = generate_bunched_data(
                 threshold=-2,
-                original_data=real_measurements['data'].loc[collude_indices, 'whz'],
-                percent_below_threshold_original=(real_measurements['data'].loc[collude_indices, 'whz'] < -2).mean() * 100,
-                percent_below_threshold_bunched=(real_measurements['data'].loc[collude_indices, 'whz'] < -2).mean() * 100 - percent_under_reporting_wasting,
+                original_data=real_subset_L1['data'].loc[collude_indices, 'whz'],
+                percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'whz'] < -2).mean() * 100,
+                percent_below_threshold_bunched=(real_subset_L1['data'].loc[collude_indices, 'whz'] < -2).mean() * 100 - percent_under_reporting_wasting,
                 bunch_factor=bunch_factor_whz,
                 bin_size=bin_size
             )
@@ -548,17 +582,17 @@ def generate_L1_distorted_measurements(
             # Calculate distorted weight from distorted WHZ, assuming height remains un-distorted
             distorted_measurements['data'].loc[collude_indices, 'weight'] = weight_from_whz(
                 distorted_measurements['data'].loc[collude_indices, 'whz'],
-                real_measurements['data'].loc[collude_indices, 'height'],
-                real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
-                real_measurements['data'].loc[collude_indices, 'loh'],
+                real_subset_L1['data'].loc[collude_indices, 'height'],
+                real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+                real_subset_L1['data'].loc[collude_indices, 'loh'],
                 whz_params_lying, whz_params_standing
             )
 
             # Calculate distorted WAZ from distorted weight
             distorted_measurements['data'].loc[collude_indices, 'waz'] = calculate_waz(
                 distorted_measurements['data'].loc[collude_indices, 'weight'],
-                real_measurements['data'].loc[collude_indices, 'age'],
-                real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+                real_subset_L1['data'].loc[collude_indices, 'age'],
+                real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
                 waz_params
             )
 
@@ -575,14 +609,14 @@ def generate_L1_distorted_measurements(
         # Re-calculate HAZ, WAZ and WHZ from distorted height and weight with measurement error for colluding children
         distorted_measurements['data'].loc[collude_indices, 'haz'] = calculate_haz(
             distorted_measurements['data'].loc[collude_indices, 'height'],
-            real_measurements['data'].loc[collude_indices, 'age'],
-            real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+            real_subset_L1['data'].loc[collude_indices, 'age'],
+            real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
             haz_params
         )
         distorted_measurements['data'].loc[collude_indices, 'waz'] = calculate_waz(
             distorted_measurements['data'].loc[collude_indices, 'weight'],
-            real_measurements['data'].loc[collude_indices, 'age'],
-            real_measurements['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
+            real_subset_L1['data'].loc[collude_indices, 'age'],
+            real_subset_L1['data'].loc[collude_indices, 'gender'],  # Changed from 'sex'
             waz_params
         )
         distorted_measurements['data'].loc[collude_indices, 'whz'] = calculate_whz(
@@ -643,7 +677,7 @@ def generate_L1_distorted_measurements(
                     label='L0', alpha=alpha_L0, edgecolor=L0_edge, linewidth=0.2, ax=axs[0, 2])
         sns.histplot(distorted_measurements['data']['haz'], bins=bins_haz, kde=False, color=L1_color, 
                     label='L1', alpha=alpha_L1, edgecolor=L1_edge, linewidth=0.2, ax=axs[0, 2])
-        axs[0, 2].axvline(x=-2, color='red', linestyle='--')
+        axs[0, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
         axs[0, 2].set_xlabel('HAZ')
         axs[0, 2].set_title('HAZ')
         axs[0, 2].legend()
@@ -660,7 +694,7 @@ def generate_L1_distorted_measurements(
                     label='L0', alpha=alpha_L0, edgecolor=L0_edge, linewidth=0.2, ax=axs[0, 3])
         sns.histplot(distorted_measurements['data']['waz'], bins=bins_waz, kde=False, color=L1_color, 
                     label='L1', alpha=alpha_L1, edgecolor=L1_edge, linewidth=0.2, ax=axs[0, 3])
-        axs[0, 3].axvline(x=-2, color='red', linestyle='--')
+        axs[0, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
         axs[0, 3].set_xlabel('WAZ')
         axs[0, 3].set_title('WAZ')
         axs[0, 3].legend()
@@ -677,7 +711,7 @@ def generate_L1_distorted_measurements(
                     label='L0', alpha=alpha_L0, edgecolor=L0_edge, linewidth=0.2, ax=axs[0, 4])
         sns.histplot(distorted_measurements['data']['whz'], bins=bins_whz, kde=False, color=L1_color, 
                     label='L1', alpha=alpha_L1, edgecolor=L1_edge, linewidth=0.2, ax=axs[0, 4])
-        axs[0, 4].axvline(x=-2, color='red', linestyle='--')
+        axs[0, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
         axs[0, 4].set_xlabel('WHZ')
         axs[0, 4].set_title('WHZ')
         axs[0, 4].legend()
@@ -734,7 +768,7 @@ def generate_L1_distorted_measurements(
         # WHZ difference histogram
         axs[1, 4].sharex(axs[0, 4])
         axs[1, 4].sharey(axs[1, 2])
-        freq_real, _ = np.histogram(real_measurements['data']['whz'], bins=bins_whz, density=False)
+        freq_real, _ = np.histogram(real_subset_L1['data']['whz'], bins=bins_whz, density=False)
         freq_distorted, _ = np.histogram(distorted_measurements['data']['whz'], bins=bins_whz, density=False)
         axs[1, 4].bar(x=bins_whz[:-1], height=freq_distorted - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
         axs[1, 4].set_xlabel('WHZ')
@@ -746,23 +780,23 @@ def generate_L1_distorted_measurements(
         # Row 3: L1 - L0 differences
 
         # Height difference scatter plot
-        axs[2, 0].scatter(x=L0_distorted_measurements['data']['height'],
-                         y=distorted_measurements['data']['height'] - L0_distorted_measurements['data']['height'],
+        axs[2, 0].scatter(x=L0_subset_L1['data']['height'],
+                         y=distorted_measurements['data']['height'] - L0_subset_L1['data']['height'],
                          color='k', marker='.', alpha=0.1)
         axs[2, 0].set_xlabel('L0 height (cm)')
         axs[2, 0].set_ylabel('L1 - L0 height (cm)')
         axs[2, 0].set_title('Height Diff (L1 - L0)')
 
         # Weight difference scatter plot
-        axs[2, 1].scatter(x=L0_distorted_measurements['data']['weight'],
-                         y=distorted_measurements['data']['weight'] - L0_distorted_measurements['data']['weight'],
+        axs[2, 1].scatter(x=L0_subset_L1['data']['weight'],
+                         y=distorted_measurements['data']['weight'] - L0_subset_L1['data']['weight'],
                          color='k', marker='.', alpha=0.1)
         axs[2, 1].set_xlabel('L0 weight (kg)')
         axs[2, 1].set_ylabel('L1 - L0 weight (kg)')
         axs[2, 1].set_title('Weight Diff (L1 - L0)')
 
         # HAZ difference histogram
-        freq_L0, _ = np.histogram(L0_distorted_measurements['data']['haz'], bins=bins_haz, density=False)
+        freq_L0, _ = np.histogram(L0_subset_L1['data']['haz'], bins=bins_haz, density=False)
         freq_L1, _ = np.histogram(distorted_measurements['data']['haz'], bins=bins_haz, density=False)
         axs[2, 2].bar(x=bins_haz[:-1], height=freq_L1 - freq_L0, width=np.diff(bins_haz), color='gray', alpha=0.7)
         axs[2, 2].set_xlabel('HAZ')
@@ -772,7 +806,7 @@ def generate_L1_distorted_measurements(
         axs[2, 2].set_title('HAZ Diff (L1 - L0)')
 
         # WAZ difference histogram
-        freq_L0, _ = np.histogram(L0_distorted_measurements['data']['waz'], bins=bins_waz, density=False)
+        freq_L0, _ = np.histogram(L0_subset_L1['data']['waz'], bins=bins_waz, density=False)
         freq_L1, _ = np.histogram(distorted_measurements['data']['waz'], bins=bins_waz, density=False)
         axs[2, 3].bar(x=bins_waz[:-1], height=freq_L1 - freq_L0, width=np.diff(bins_waz), color='gray', alpha=0.7)
         axs[2, 3].set_xlabel('WAZ')
@@ -782,7 +816,7 @@ def generate_L1_distorted_measurements(
         axs[2, 3].set_title('WAZ Diff (L1 - L0)')
 
         # WHZ difference histogram
-        freq_L0, _ = np.histogram(L0_distorted_measurements['data']['whz'], bins=bins_whz, density=False)
+        freq_L0, _ = np.histogram(L0_subset_L1['data']['whz'], bins=bins_whz, density=False)
         freq_L1, _ = np.histogram(distorted_measurements['data']['whz'], bins=bins_whz, density=False)
         axs[2, 4].bar(x=bins_whz[:-1], height=freq_L1 - freq_L0, width=np.diff(bins_whz), color='gray', alpha=0.7)
         axs[2, 4].set_xlabel('WHZ')
@@ -1085,7 +1119,7 @@ def invert_anthro_zscore(z, m, s, l):
     y = m * np.power((1 + z * s * l), 1/l)
     return y
 
-def get_msl(age, sex, params, age_label = '_agedays', sex_label = '__000001'):
+def get_msl(age, sex, params, age_label = '_agedays', sex_label = '__000001', verbose=False):
 
     """
     Get M, S, L values for a specific age and sex from the WHO growth standards.
@@ -1125,11 +1159,517 @@ def get_msl(age, sex, params, age_label = '_agedays', sex_label = '__000001'):
         2: dict(zip(params[age_label][split_idx:], params['l'][split_idx:]))
     }
 
-    for idx, i in tqdm(enumerate(age.dropna().index)):
-        sex_i = np.array(sex)[idx]
-        age_i = np.array(age)[idx]
-        m[idx] = lookup_m[sex_i].get(age_i, np.nan)
-        s[idx] = lookup_s[sex_i].get(age_i, np.nan)
-        l[idx] = lookup_l[sex_i].get(age_i, np.nan)
+    if verbose:
+        for idx, i in tqdm(enumerate(age.dropna().index)):
+            sex_i = np.array(sex)[idx]
+            age_i = np.array(age)[idx]
+            m[idx] = lookup_m[sex_i].get(age_i, np.nan)
+            s[idx] = lookup_s[sex_i].get(age_i, np.nan)
+            l[idx] = lookup_l[sex_i].get(age_i, np.nan)
+    else:
+        for idx, i in enumerate(age.dropna().index):
+            sex_i = np.array(sex)[idx]
+            age_i = np.array(age)[idx]
+            m[idx] = lookup_m[sex_i].get(age_i, np.nan)
+            s[idx] = lookup_s[sex_i].get(age_i, np.nan)
+            l[idx] = lookup_l[sex_i].get(age_i, np.nan)
 
     return m, s, l
+
+def calculate_discrepancy_scores(measurements1, measurements2, variable, method, 
+                               make_plot=False, plot_title=None,
+                               measurements1_name=None, measurements2_name=None,
+                               discrepancy_unit=None):
+    """Calculate discrepancy scores between two sets of measurements for a given variable.
+    
+    Args:
+        measurements1 (dict): First set of measurements
+        measurements2 (dict): Second set of measurements 
+        variable (str): Variable to compare ('height', 'weight', 'haz', 'waz' or 'whz')
+        method (str): Method for calculating discrepancy:
+            - 'percent_difference'
+            - 'absolute_difference'
+            - 'absolute_percent_difference'
+            - 'simple_difference'
+            - 'percent_non_match'
+            - 'directional_percent_non_match'
+            - 'directional_difference'
+        make_plot (bool): Whether to create visualization plots
+        plot_title (str): Title for the plots
+        measurements1_name (str): Label for measurements1 on x-axis
+        measurements2_name (str): Label for measurements2 on x-axis
+        discrepancy_unit (str): Unit for discrepancy scores (e.g., 'kg' for weight)
+    
+    Returns:
+        numpy.array: Array of discrepancy scores for each measurement
+    """
+    
+    # Check if variable exists in both dictionaries
+    if variable not in measurements1 or variable not in measurements2:
+        raise KeyError(f"Variable '{variable}' must be present in both measurement dictionaries")
+        
+    # Get the measurements for the specified variable
+    values1 = measurements1[variable]
+    values2 = measurements2[variable]
+    
+    # Calculate individual discrepancy scores
+    if method == "percent_difference":
+        disc_scores = (values1 - values2) / values2 * 100
+    elif method == "absolute_difference":
+        disc_scores = np.abs(values1 - values2)
+    elif method == "absolute_percent_difference":
+        disc_scores = np.abs((values1 - values2) / values2 * 100)
+    elif method == "simple_difference":
+        disc_scores = values1 - values2
+    else:
+        raise ValueError("Method must be one of: percent_difference, absolute_difference, absolute_percent_difference, simple_difference")
+    
+    if make_plot:
+        # Set default labels if not provided
+        if measurements1_name is None:
+            measurements1_name = "Measurements 1"
+        if measurements2_name is None:
+            measurements2_name = "Measurements 2"
+        if plot_title is None:
+            plot_title = f"Discrepancy Analysis for {variable}"
+        if discrepancy_unit is None:
+            discrepancy_label = "Discrepancy"
+        else:
+            discrepancy_label = f"Discrepancy ({discrepancy_unit})"
+            
+        # Create figure with 1 row and 3 columns
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle(plot_title, fontsize=14)
+        
+        # Histogram of discrepancy scores
+        ax1.hist(disc_scores, bins=50, color='lightgray', edgecolor='black')
+        ax1.set_xlabel(discrepancy_label, fontsize=12)
+        ax1.set_ylabel('Frequency', fontsize=12)
+        
+        # Scatter plot against measurements1
+        ax2.scatter(values1, disc_scores, alpha=0.2, color='turquoise', s=20, linewidth=0)
+        ax2.set_xlabel(f"{measurements1_name} {variable}", fontsize=12)
+        ax2.set_ylabel('Unit-wise discrepancy', fontsize=12)
+        
+        # Scatter plot against measurements2
+        ax3.scatter(values2, disc_scores, alpha=0.2, color='salmon', s=20, linewidth=0)
+        ax3.set_xlabel(f"{measurements2_name} {variable}", fontsize=12)
+        ax3.set_ylabel('Unit-wise discrepancy', fontsize=12)
+        
+        # Adjust layout
+        plt.tight_layout()
+        plt.show()
+    
+    return disc_scores
+
+def generate_nested_measurements(
+        real_params,
+        L0_params_list,  # List of dicts, one per L0
+        L1_params_list,  # List of dicts, one per L1
+        n_L1s,
+        n_L0s_per_L1,
+        n_children_per_L0,
+        n_children_L1,
+        haz_params,
+        waz_params,
+        whz_params_lying,
+        whz_params_standing,
+        make_plots=False
+    ):
+    """Generate nested measurements for multiple L1s and L0s.
+    
+    Args:
+        real_params (dict): Parameters for generating real measurements
+        L0_params_list (list): List of parameter dictionaries for L0 distortion, one per L0
+        L1_params_list (list): List of parameter dictionaries for L1 distortion, one per L1
+        n_L1s (int): Number of L1 units
+        n_L0s_per_L1 (int): Number of L0 units per L1
+        n_children_per_L0 (int): Number of children per L0
+        n_children_L1 (int): Number of children measured by L1 from each L0
+        haz_params, waz_params, whz_params_lying, whz_params_standing: WHO parameters
+        make_plots (bool): Whether to show diagnostic plots
+        
+    Returns:
+        dict: Nested dictionary containing measurements for each L1 and L0
+    """
+    
+    # Validate length of parameter lists
+    if len(L0_params_list) != n_L1s * n_L0s_per_L1:
+        raise ValueError(f"L0_params_list must contain {n_L1s * n_L0s_per_L1} parameter sets")
+    if len(L1_params_list) != n_L1s:
+        raise ValueError(f"L1_params_list must contain {n_L1s} parameter sets")
+    
+    nested_measurements = {}
+    L0_param_idx = 0  # Index to track current L0 parameters
+    
+    for L1_id in range(n_L1s):
+        nested_measurements[f'L1_{L1_id}'] = {}
+        L1_measurements_dict = {}  # Store L1 measurements for each L0
+        
+        for L0_id in range(n_L0s_per_L1):
+            # Generate real measurements for this L0
+            real_measurements = generate_real_measurements(
+                num_children=n_children_per_L0,
+                **real_params,
+                haz_params=haz_params,
+                waz_params=waz_params, 
+                whz_params_lying=whz_params_lying,
+                whz_params_standing=whz_params_standing,
+                plot_distributions=make_plots
+            )
+            
+            # Generate L0 distorted measurements using L0-specific parameters
+            L0_measurements = generate_L0_distorted_measurements(
+                real_measurements=real_measurements,
+                **L0_params_list[L0_param_idx],
+                haz_params=haz_params,
+                waz_params=waz_params,
+                whz_params_lying=whz_params_lying,
+                whz_params_standing=whz_params_standing,
+                make_plots=make_plots
+            )
+            L0_param_idx += 1
+            
+            # Generate L1 measurements for this specific L0
+            L1_measurements = generate_L1_distorted_measurements(
+                real_measurements=real_measurements,
+                L0_distorted_measurements=L0_measurements,
+                num_children_L1=n_children_L1,
+                **L1_params_list[L1_id],
+                haz_params=haz_params,
+                waz_params=waz_params,
+                whz_params_lying=whz_params_lying,
+                whz_params_standing=whz_params_standing,
+                make_plots=make_plots
+            )
+            
+            # Store all measurements for this L0
+            nested_measurements[f'L1_{L1_id}'][f'L0_{L0_id}'] = {
+                'real': real_measurements,
+                'L0': L0_measurements,
+                'L1': L1_measurements
+            }
+            
+            # Store L1 measurements separately to track which children were measured
+            L1_measurements_dict[f'L0_{L0_id}'] = L1_measurements
+        
+        # Store L1 measurements info at L1 level
+        nested_measurements[f'L1_{L1_id}']['L1_info'] = L1_measurements_dict
+        
+    return nested_measurements
+
+def generate_nested_distortion_parameters(
+        n_L1s, 
+        n_L0s_per_L1,
+        # Real percentages
+        real_percent_stunting=None,
+        real_percent_underweight=None,
+        real_percent_wasting=None,
+        # L0 parameter means
+        mean_percent_under_reporting_stunting=30,
+        mean_percent_under_reporting_underweight=30,
+        mean_percent_under_reporting_wasting=None,
+        mean_bunch_factor_haz=0.1,
+        mean_bunch_factor_waz=0.1,
+        mean_bunch_factor_whz=0.1,
+        # L0 parameter standard deviations across units
+        sd_across_units_percent_under_reporting_stunting=5,
+        sd_across_units_percent_under_reporting_underweight=5,
+        sd_across_units_percent_under_reporting_wasting=5,
+        sd_across_units_bunch_factor_haz=0.02,
+        sd_across_units_bunch_factor_waz=0.02,
+        sd_across_units_bunch_factor_whz=0.02,
+        # L0 parameter standard deviations within units
+        sd_within_units_percent_under_reporting_stunting=2,
+        sd_within_units_percent_under_reporting_underweight=2,
+        sd_within_units_percent_under_reporting_wasting=2,
+        sd_within_units_bunch_factor_haz=0.01,
+        sd_within_units_bunch_factor_waz=0.01,
+        sd_within_units_bunch_factor_whz=0.01,
+        # L1 parameters
+        mean_percent_copy=10,
+        mean_collusion_index=0.5,
+        sd_percent_copy=2,
+        sd_collusion_index=0.1,
+        random_seed=None
+    ):
+    """Generate nested distortion parameters for L0s and L1s.
+    
+    Args:
+        n_L1s (int): Number of L1 units
+        n_L0s_per_L1 (int): Number of L0s per L1 unit
+        real_percent_* (float): Actual percentages in real data
+        mean_* (float): Mean values for parameters
+        sd_across_units_* (float): Standard deviation across units
+        sd_within_units_* (float): Standard deviation within units
+        random_seed (int): Random seed for reproducibility
+        
+    Returns:
+        tuple: (L0_params_list, L1_params_list) containing parameter dictionaries
+    """
+    
+    if random_seed is not None:
+        np.random.seed(random_seed)
+        
+    # Validate mean under-reporting doesn't exceed real percentages
+    if real_percent_stunting is not None and mean_percent_under_reporting_stunting is not None:
+        if mean_percent_under_reporting_stunting > real_percent_stunting:
+            raise ValueError(f"Mean under-reporting for stunting ({mean_percent_under_reporting_stunting}) cannot exceed real percent stunting ({real_percent_stunting})")
+    
+    if real_percent_underweight is not None and mean_percent_under_reporting_underweight is not None:
+        if mean_percent_under_reporting_underweight > real_percent_underweight:
+            raise ValueError(f"Mean under-reporting for underweight ({mean_percent_under_reporting_underweight}) cannot exceed real percent underweight ({real_percent_underweight})")
+    
+    if real_percent_wasting is not None and mean_percent_under_reporting_wasting is not None:
+        if mean_percent_under_reporting_wasting > real_percent_wasting:
+            raise ValueError(f"Mean under-reporting for wasting ({mean_percent_under_reporting_wasting}) cannot exceed real percent wasting ({real_percent_wasting})")
+            
+    L0_params_list = []
+    L1_params_list = []
+    
+    # Generate L1 parameters
+    for _ in range(n_L1s):
+        L1_params = {
+            'percent_copy': max(0, min(100, np.random.normal(mean_percent_copy, sd_percent_copy))),
+            'collusion_index': max(0, min(1, np.random.normal(mean_collusion_index, sd_collusion_index)))
+        }
+        L1_params_list.append(L1_params)
+    
+    # Generate L0 parameters unit by unit
+    for L1_id in range(n_L1s):
+        # Generate unit means
+        unit_means = {
+            'percent_under_reporting_stunting': (
+                min(real_percent_stunting, max(0, np.random.normal(mean_percent_under_reporting_stunting, 
+                    sd_across_units_percent_under_reporting_stunting)))
+                if mean_percent_under_reporting_stunting is not None else None
+            ),
+            'percent_under_reporting_underweight': (
+                min(real_percent_underweight, max(0, np.random.normal(mean_percent_under_reporting_underweight,
+                    sd_across_units_percent_under_reporting_underweight)))
+                if mean_percent_under_reporting_underweight is not None else None
+            ),
+            'percent_under_reporting_wasting': (
+                min(real_percent_wasting, max(0, np.random.normal(mean_percent_under_reporting_wasting,
+                    sd_across_units_percent_under_reporting_wasting)))
+                if mean_percent_under_reporting_wasting is not None else None
+            ),
+            'bunch_factor_haz': np.random.normal(mean_bunch_factor_haz, sd_across_units_bunch_factor_haz),
+            'bunch_factor_waz': np.random.normal(mean_bunch_factor_waz, sd_across_units_bunch_factor_waz),
+            'bunch_factor_whz': np.random.normal(mean_bunch_factor_whz, sd_across_units_bunch_factor_whz)
+        }
+        
+        # Generate parameters for each L0 in this unit
+        for _ in range(n_L0s_per_L1):
+            L0_params = {
+                'percent_under_reporting_stunting': (
+                    min(real_percent_stunting, max(0, np.random.normal(
+                        unit_means['percent_under_reporting_stunting'], 
+                        sd_within_units_percent_under_reporting_stunting)))
+                    if unit_means['percent_under_reporting_stunting'] is not None else None
+                ),
+                'percent_under_reporting_underweight': (
+                    min(real_percent_underweight, max(0, np.random.normal(
+                        unit_means['percent_under_reporting_underweight'],
+                        sd_within_units_percent_under_reporting_underweight)))
+                    if unit_means['percent_under_reporting_underweight'] is not None else None
+                ),
+                'percent_under_reporting_wasting': (
+                    min(real_percent_wasting, max(0, np.random.normal(
+                        unit_means['percent_under_reporting_wasting'],
+                        sd_within_units_percent_under_reporting_wasting)))
+                    if unit_means['percent_under_reporting_wasting'] is not None else None
+                ),
+                'bunch_factor_haz': max(0, min(1, np.random.normal(unit_means['bunch_factor_haz'],
+                                                                  sd_within_units_bunch_factor_haz))),
+                'bunch_factor_waz': max(0, min(1, np.random.normal(unit_means['bunch_factor_waz'],
+                                                                  sd_within_units_bunch_factor_waz))),
+                'bunch_factor_whz': max(0, min(1, np.random.normal(unit_means['bunch_factor_whz'],
+                                                                  sd_within_units_bunch_factor_whz)))
+            }
+            L0_params_list.append(L0_params)
+    
+    return L0_params_list, L1_params_list
+
+def calculate_ranks_L0_units(nested_measurements, measurement_var, method='simple_difference'):
+    """
+    Calculate real and measured ranks for units of L0s based on average discrepancy scores.
+    
+    Args:
+        nested_measurements (dict): Nested dictionary containing measurements structured as:
+            L1_id -> L0_id -> measurement_type -> measurements
+        measurement_var (str): Variable to calculate discrepancy scores for (e.g., 'weight', 'height')
+        method (str): Method to calculate discrepancy scores. Default: 'simple_difference'
+            
+    Returns:
+        tuple: (real_ranks, measured_ranks) where each is an array of L1 unit ranks (1-based)
+        ordered by the L1 unit IDs
+    """
+    # Store average discrepancy scores for each L1 unit
+    unit_real_discrepancies = {}
+    unit_measured_discrepancies = {}
+    
+    # Calculate average discrepancy scores for each L1 unit
+    for L1_id in nested_measurements:
+        if L1_id == 'metadata':
+            continue
+            
+        # Store discrepancy scores for all L0s in this L1 unit
+        real_discrepancies = []
+        measured_discrepancies = []
+        
+        # Calculate discrepancy scores for each L0 in this L1 unit
+        for L0_id in nested_measurements[L1_id]:
+            if L0_id == 'L1_info':
+                continue
+                
+            # Get measurements
+            real_meas = nested_measurements[L1_id][L0_id]['real']
+            L0_meas = nested_measurements[L1_id][L0_id]['L0']
+            L1_meas = nested_measurements[L1_id][L0_id]['L1']
+            
+            # Calculate real discrepancy (L0 vs real)
+            real_disc = calculate_discrepancy_scores(
+                L0_meas['data'],
+                real_meas['data'],
+                measurement_var,
+                method,
+                make_plot=False
+            )
+            real_discrepancies.append(abs(real_disc.mean()))
+            
+            # Calculate measured discrepancy (L0 vs L1)
+            # Only use children measured by L1
+            L1_indices = L1_meas['data'].index
+            L0_subset = {
+                'data': L0_meas['data'].loc[L1_indices].copy(),
+                'metadata': L0_meas['metadata'].copy()
+            }
+            
+            measured_disc = calculate_discrepancy_scores(
+                L0_subset['data'],
+                L1_meas['data'],
+                measurement_var,
+                method,
+                make_plot=False
+            )
+            measured_discrepancies.append(abs(measured_disc.mean()))
+        
+        # Calculate average discrepancy for this L1 unit
+        unit_real_discrepancies[L1_id] = real_discrepancies
+        unit_measured_discrepancies[L1_id] = measured_discrepancies
+
+    # Convert to arrays ordered by L1_id
+    L1_ids = sorted([L1_id for L1_id in unit_real_discrepancies.keys()])
+    mean_real_discrepancies = np.array([np.mean(unit_real_discrepancies[L1_id]) for L1_id in L1_ids])
+    mean_measured_discrepancies = np.array([np.mean(unit_measured_discrepancies[L1_id]) for L1_id in L1_ids])
+
+    # Calculate ranks (1-based ranking, descending order of discrepancy)
+    real_ranks = (-mean_real_discrepancies).argsort().argsort() + 1
+    measured_ranks = (-mean_measured_discrepancies).argsort().argsort() + 1
+    
+    return real_ranks, measured_ranks, unit_real_discrepancies, unit_measured_discrepancies
+
+def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, measurement_unit, 
+                                     real_discrepancies, measured_discrepancies,
+                                     real_ranks, measured_ranks, figsize=(15, 8)):
+    """
+    Visualize nested measurements and ranks using scatter plots and violin plots.
+    
+    Args:
+        nested_measurements (dict): Nested measurements dictionary
+        measurement_var (str): Variable being measured (e.g., 'weight', 'height')
+        measurement_unit (str): Unit of measurement (e.g., 'kg', 'cm')
+        real_discrepancies (array): Real discrepancy scores for each L1 unit
+        measured_discrepancies (array): Measured discrepancy scores for each L1 unit
+        real_ranks (array): Array of real ranks for each L1 unit
+        measured_ranks (array): Array of measured ranks for each L1 unit
+        figsize (tuple): Figure size (width, height)
+    """
+    # Get number of L1 units
+    n_L1s = len(real_ranks)
+    
+    # Create figure
+    fig, axs = plt.subplots(3, n_L1s, figsize=figsize, sharey = 'row', constrained_layout=True)
+    
+    # Color scheme for L0s - create a distinct color for each L0 in a unit
+    L0_colors = plt.cm.Dark2(np.linspace(0, 1, max(len(nested_measurements[L1_id]) - 1 
+                                                   for L1_id in nested_measurements 
+                                                   if L1_id != 'metadata')))
+    
+    # Get order of L1 units based on real ranks
+    L1_order = np.argsort(real_ranks)
+    
+    # Plot for each L1 unit
+    for i, L1_idx in enumerate(L1_order):
+        L1_id = f'L1_{L1_idx}'
+        
+        # Get measurement ranges for this unit to set axis limits
+        all_measurements = []
+        
+        # Plot scatter plots for each L0
+        for j, L0_id in enumerate(nested_measurements[L1_id]):
+            if L0_id == 'L1_info':
+                continue
+                
+            # Get measurements
+            real_meas = nested_measurements[L1_id][L0_id]['real']['data'][measurement_var]
+            L0_meas = nested_measurements[L1_id][L0_id]['L0']['data'][measurement_var]
+            L1_meas = nested_measurements[L1_id][L0_id]['L1']['data'][measurement_var]
+            
+            all_measurements.extend(real_meas)
+            all_measurements.extend(L0_meas)
+            all_measurements.extend(L1_meas)
+            
+            # First row: Real vs L0
+            axs[0, i].scatter(real_meas, L0_meas, color=L0_colors[j], alpha=0.5, 
+                            label=f'L0_{j}', s=20)
+            
+            # Second row: L0 vs L1 (only for children measured by L1)
+            L1_indices = nested_measurements[L1_id][L0_id]['L1']['data'].index
+            axs[1, i].scatter(L0_meas.loc[L1_indices], L1_meas, 
+                            color=L0_colors[j], alpha=0.5, label=f'L0_{j}', s=20)
+        
+        # Set axis limits and add X=Y line for scatter plots
+        axis_min = min(all_measurements)
+        axis_max = max(all_measurements)
+        line = np.linspace(axis_min, axis_max, 100)
+        
+        for row in [0, 1]:
+            axs[row, i].plot(line, line, 'k--', alpha=0.5)
+            axs[row, i].set_xlim(axis_min, axis_max)
+            axs[row, i].set_ylim(axis_min, axis_max)
+            if i == 0:
+                if row == 0:
+                    axs[row, i].set_ylabel(f'L0 {measurement_var} ({measurement_unit})')
+                else:
+                    axs[row, i].set_ylabel(f'L1 {measurement_var} ({measurement_unit})')
+        
+        # Set x-labels
+        axs[0, i].set_xlabel(f'Real {measurement_var} ({measurement_unit})')
+        axs[1, i].set_xlabel(f'L0 {measurement_var} ({measurement_unit})')
+        
+        
+        # Third row: Violin plots of discrepancies
+        parts = axs[2, i].violinplot([real_discrepancies[L1_id], measured_discrepancies[L1_id]],
+                                   positions=[1, 2],
+                                   showmeans=True)
+        
+        # Color the violin plots
+        colors = {'real': '#2c7bb6', 'measured': '#d7191c'}
+        for pc, color in zip(parts['bodies'], colors.values()):
+            pc.set_facecolor(color)
+            pc.set_alpha(0.7)
+        parts['cmeans'].set_color('black')
+        
+        # Set labels for violin plots
+        axs[2, i].set_xticks([1, 2])
+        axs[2, i].set_xticklabels(['Real', 'Measured'])
+        if i == 0:
+            axs[2, i].set_ylabel(f'{measurement_var.capitalize()} discrepancy ({measurement_unit})')
+        
+        # Add title showing ranks
+        axs[0, i].set_title(f'Real rank: {real_ranks[L1_idx]}\nMeasured rank: {measured_ranks[L1_idx]}')
+    
+    #plt.tight_layout()
+    return fig
