@@ -225,13 +225,15 @@ def generate_L0_distorted_measurements(
             raise ValueError("Percent under-reporting for underweight exceeds actual percent underweight.")
 
         # Under-reporting for stunting
-        distorted_measurements['data']['haz'] = generate_bunched_data(threshold=reporting_threshold,
+        distorted_measurements['data']['haz'], 
+        distorted_measurements['metadata']['bunching_warning_haz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=real_measurements['data']['haz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_stunting'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_stunting'] - percent_under_reporting_stunting,
                                                                bunch_factor=bunch_factor_haz, bin_size=bin_size)
         # Under-reporting for underweight
-        distorted_measurements['data']['waz'] = generate_bunched_data(threshold=reporting_threshold,
+        distorted_measurements['data']['waz'], 
+        distorted_measurements['metadata']['bunching_warning_waz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=distorted_measurements['data']['waz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_underweight'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_underweight'] - percent_under_reporting_underweight,
@@ -255,7 +257,8 @@ def generate_L0_distorted_measurements(
             raise ValueError("Percent under-reporting for wasting exceeds actual percent wasting.")
         
         # Under-reporting for wasting
-        distorted_measurements['data']['whz'] = generate_bunched_data(threshold=reporting_threshold,
+        distorted_measurements['data']['whz'], 
+        distorted_measurements['metadata']['bunching_warning_whz'] = generate_bunched_data(threshold=reporting_threshold,
                                                                original_data=distorted_measurements['data']['whz'],
                                                                percent_below_threshold_original=real_measurements['metadata']['percent_wasting'],
                                                                percent_below_threshold_bunched=real_measurements['metadata']['percent_wasting'] - percent_under_reporting_wasting,
@@ -525,7 +528,8 @@ def generate_L1_distorted_measurements(
         # Apply under-reporting for stunting and underweight if both are provided
         if percent_under_reporting_stunting is not None and percent_under_reporting_underweight is not None:
             # Under-reporting for stunting
-            distorted_measurements['data'].loc[collude_indices, 'haz'] = generate_bunched_data(
+            distorted_measurements['data'].loc[collude_indices, 'haz'], 
+            distorted_measurements['metadata']['bunching_warning_haz'] = generate_bunched_data(
                 threshold=-2,
                 original_data=real_subset_L1['data'].loc[collude_indices, 'haz'],
                 percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'haz'] < -2).mean() * 100,
@@ -534,7 +538,8 @@ def generate_L1_distorted_measurements(
                 bin_size=bin_size
             )
             # Under-reporting for underweight
-            distorted_measurements['data'].loc[collude_indices, 'waz'] = generate_bunched_data(
+            distorted_measurements['data'].loc[collude_indices, 'waz'],
+            distorted_measurements['metadata']['bunching_warning_waz'] = generate_bunched_data(
                 threshold=-2,
                 original_data=real_subset_L1['data'].loc[collude_indices, 'waz'],
                 percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'waz'] < -2).mean() * 100,
@@ -570,7 +575,8 @@ def generate_L1_distorted_measurements(
         elif percent_under_reporting_wasting is not None:
 
             # Under-reporting for wasting
-            distorted_measurements['data'].loc[collude_indices, 'whz'] = generate_bunched_data(
+            distorted_measurements['data'].loc[collude_indices, 'whz'],
+            distorted_measurements['metadata']['bunching_warning_whz'] = generate_bunched_data(
                 threshold=-2,
                 original_data=real_subset_L1['data'].loc[collude_indices, 'whz'],
                 percent_below_threshold_original=(real_subset_L1['data'].loc[collude_indices, 'whz'] < -2).mean() * 100,
@@ -848,8 +854,11 @@ def generate_bunched_data(threshold, original_data, percent_below_threshold_orig
         percent_below_threshold_bunched (float): The desired percentage of data below the threshold in the bunched data.
         bunch_factor (float): Float between 0 and 1 (exclusive) which gives the intensity of bunching (closer to 1 means more bunching).
         bin_size (float): The size of the bins for bunching.
+    Returns:
+        tuple: (bunched_data, warning_flag) where warning_flag indicates if percent_shift was too high
     """
     bunched_data = original_data.copy(deep = True)
+    warning_flag = False
     
     # Divide the range of the data into bins of size bin_size
     bins = np.arange(original_data.min(), original_data.max() + bin_size, bin_size)
@@ -866,9 +875,16 @@ def generate_bunched_data(threshold, original_data, percent_below_threshold_orig
             n_points = (binned_data == bin).sum()
             # Calculate the number of points to shift
             n_shift = int(n_points * percent_shift/100)
-            # Choose random points to shift and get their indices in bunched_data
-            shift_points = bunched_data[binned_data == bin].sample(n=n_shift, replace=False)
-            shift_indices.extend(shift_points.index)
+            
+            # Check if n_shift is larger than available points
+            if n_shift > len(bunched_data[binned_data == bin]):
+                warning_flag = True
+                shift_points = bunched_data[binned_data == bin]  # Take all points
+                shift_indices.extend(shift_points.index)
+            else:
+                # Choose random points to shift and get their indices in bunched_data
+                shift_points = bunched_data[binned_data == bin].sample(n=n_shift, replace=False)
+                shift_indices.extend(shift_points.index)
 
     # Assign exponentially decreasing probabilities to each bin above the threshold based on the bunch factor
     probabilities = []
@@ -887,7 +903,7 @@ def generate_bunched_data(threshold, original_data, percent_below_threshold_orig
         # Choose a random point from the chosen bin and assign it to the bunched data
         bunched_data.loc[idx] = np.random.uniform(chosen_bin.left, chosen_bin.right)
 
-    return bunched_data
+    return bunched_data, warning_flag
 
 def add_measurement_error(data, error_mean=0.5, error_sd=0.1):
     """
@@ -1700,8 +1716,8 @@ def L0_unit_classification_confidence(
     real_percent_stunting=None,
     real_percent_underweight=None,
     real_percent_wasting=None,
-    mean_percent_under_reporting_stunting=30,
-    mean_percent_under_reporting_underweight=30,
+    mean_percent_under_reporting_stunting=20,
+    mean_percent_under_reporting_underweight=20,
     mean_percent_under_reporting_wasting=None,
     mean_bunch_factor_haz=0.1,
     mean_bunch_factor_waz=0.1,
@@ -1760,6 +1776,8 @@ def L0_unit_classification_confidence(
             for n_children_L1 in n_children_L1_list:
                 sim_real_ranks = []
                 sim_overlaps = []
+                warning_count = 0  # Track warnings for this parameter combination
+
                 
                 # Run multiple simulations
                 for sim in range(n_simulations):
@@ -1811,6 +1829,48 @@ def L0_unit_classification_confidence(
                         make_plots=False
                     )
                     
+                    # Check for warnings in the measurements
+                    warning_found = False
+                    for L1_id in nested_measurements:
+                        if L1_id == 'metadata':
+                            continue
+
+                        # Check each L0 in this L1 unit
+                        for L0_id in nested_measurements[L1_id]:
+                            if L0_id == 'L1_info':
+                                continue
+
+                            # Check the L0 data first
+                            if 'bunching_warning_haz' in nested_measurements[L1_id][L0_id]['L0']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L0']['metadata']['bunching_warning_haz']:
+                                    warning_found = True
+                                    break
+                            if 'bunching_warning_waz' in nested_measurements[L1_id][L0_id]['L0']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L0']['metadata']['bunching_warning_waz']:
+                                    warning_found = True
+                                    break
+                            if 'bunching_warning_whz' in nested_measurements[L1_id][L0_id]['L0']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L0']['metadata']['bunching_warning_whz']:
+                                    warning_found = True
+                                    break
+                            # Check the L1 data too
+                            if 'bunching_warning_haz' in nested_measurements[L1_id][L0_id]['L1']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L1']['metadata']['bunching_warning_haz']:
+                                    warning_found = True
+                                    break
+                            if 'bunching_warning_waz' in nested_measurements[L1_id][L0_id]['L1']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L1']['metadata']['bunching_warning_waz']:
+                                    warning_found = True
+                                    break
+                            if 'bunching_warning_whz' in nested_measurements[L1_id][L0_id]['L1']['metadata']:
+                                if nested_measurements[L1_id][L0_id]['L1']['metadata']['bunching_warning_whz']:
+                                    warning_found = True
+                                    break
+                        if warning_found:
+                            break
+                    if warning_found:
+                        warning_count += 1
+
                     # Calculate ranks
                     real_ranks, measured_ranks, _, _ = calculate_ranks_L0_units(
                         nested_measurements, 
@@ -1826,6 +1886,13 @@ def L0_unit_classification_confidence(
                     top_measured = np.where(measured_ranks <= n_L1_units_rewarded)[0]
                     sim_overlaps.append(len(set(top_real) & set(top_measured)))
                 
+                # Print warning count for this parameter combination
+                if warning_count > 0:
+                    print(f"\nWarning: For parameter combination:")
+                    print(f"n_L0s_per_L1={n_L0s}, n_children_per_L0={n_children_L0}, n_children_L1={n_children_L1}")
+                    print(f"Percent shift was too high in {warning_count} out of {n_simulations} simulations")
+                
+
                 # Store results with mean and SEM across simulations
                 results.append({
                     'n_L0s_per_L1': n_L0s,
