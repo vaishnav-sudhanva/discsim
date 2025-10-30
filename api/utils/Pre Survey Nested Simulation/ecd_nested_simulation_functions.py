@@ -1564,15 +1564,15 @@ def calculate_ranks_L0_units(nested_measurements, measurement_var, method='simpl
     mean_real_discrepancies = np.array([np.mean(unit_real_discrepancies[L1_id]) for L1_id in L1_ids])
     mean_measured_discrepancies = np.array([np.mean(unit_measured_discrepancies[L1_id]) for L1_id in L1_ids])
 
-    # Calculate ranks (1-based ranking, descending order of discrepancy)
-    real_ranks = (-mean_real_discrepancies).argsort().argsort() + 1
-    measured_ranks = (-mean_measured_discrepancies).argsort().argsort() + 1
-    
+    # Calculate ranks (1-based ranking, ascending order of discrepancy)
+    real_ranks = mean_real_discrepancies.argsort().argsort() + 1
+    measured_ranks = mean_measured_discrepancies.argsort().argsort() + 1
+
     return real_ranks, measured_ranks, unit_real_discrepancies, unit_measured_discrepancies
 
 def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, measurement_unit, 
                                      real_discrepancies, measured_discrepancies,
-                                     real_ranks, measured_ranks, figsize=(15, 8)):
+                                     real_ranks, measured_ranks, figsize=(15, 6)):
     """
     Visualize nested measurements and ranks using scatter plots and violin plots.
     
@@ -1590,7 +1590,12 @@ def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, mea
     n_L1s = len(real_ranks)
     
     # Create figure
-    fig, axs = plt.subplots(3, n_L1s, figsize=figsize, sharey = 'row', constrained_layout=True)
+    fig, axs = plt.subplots(3, n_L1s, figsize=figsize, sharey='row', constrained_layout=True)
+    
+    # Font sizes
+    TITLE_SIZE = 12
+    LABEL_SIZE = 12
+    TICK_SIZE = 10
     
     # Color scheme for L0s - create a distinct color for each L0 in a unit
     L0_colors = plt.cm.Dark2(np.linspace(0, 1, max(len(nested_measurements[L1_id]) - 1 
@@ -1627,7 +1632,7 @@ def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, mea
             
             # Second row: L0 vs L1 (only for children measured by L1)
             L1_indices = nested_measurements[L1_id][L0_id]['L1']['data'].index
-            axs[1, i].scatter(L0_meas.loc[L1_indices], L1_meas, 
+            axs[1, i].scatter(L1_meas, L0_meas.loc[L1_indices],
                             color=L0_colors[j], alpha=0.5, label=f'L0_{j}', s=20)
         
         # Set axis limits and add X=Y line for scatter plots
@@ -1641,14 +1646,14 @@ def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, mea
             axs[row, i].set_ylim(axis_min, axis_max)
             if i == 0:
                 if row == 0:
-                    axs[row, i].set_ylabel(f'L0 {measurement_var} ({measurement_unit})')
+                    axs[row, i].set_ylabel(f'L0 {measurement_var} ({measurement_unit})', fontsize=LABEL_SIZE)
                 else:
-                    axs[row, i].set_ylabel(f'L1 {measurement_var} ({measurement_unit})')
+                    axs[row, i].set_ylabel(f'L0 {measurement_var} ({measurement_unit})', fontsize=LABEL_SIZE)
+            axs[row, i].tick_params(axis='both', labelsize=TICK_SIZE)
         
         # Set x-labels
-        axs[0, i].set_xlabel(f'Real {measurement_var} ({measurement_unit})')
-        axs[1, i].set_xlabel(f'L0 {measurement_var} ({measurement_unit})')
-        
+        axs[0, i].set_xlabel(f'Real {measurement_var} ({measurement_unit})', fontsize=LABEL_SIZE)
+        axs[1, i].set_xlabel(f'L1 {measurement_var} ({measurement_unit})', fontsize=LABEL_SIZE)
         
         # Third row: Violin plots of discrepancies
         parts = axs[2, i].violinplot([real_discrepancies[L1_id], measured_discrepancies[L1_id]],
@@ -1664,12 +1669,250 @@ def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, mea
         
         # Set labels for violin plots
         axs[2, i].set_xticks([1, 2])
-        axs[2, i].set_xticklabels(['Real', 'Measured'])
+        axs[2, i].set_xticklabels(['Real', 'Measured'], fontsize=TICK_SIZE)
+        axs[2, i].tick_params(axis='y', labelsize=TICK_SIZE)
         if i == 0:
-            axs[2, i].set_ylabel(f'{measurement_var.capitalize()} discrepancy ({measurement_unit})')
+            axs[2, i].set_ylabel(f'{measurement_var.capitalize()} discrepancy ({measurement_unit})', fontsize=LABEL_SIZE)
         
         # Add title showing ranks
-        axs[0, i].set_title(f'Real rank: {real_ranks[L1_idx]}\nMeasured rank: {measured_ranks[L1_idx]}')
+        axs[0, i].set_title(f'Real rank: {real_ranks[L1_idx]}\nMeasured rank: {measured_ranks[L1_idx]}', 
+                           fontsize=TITLE_SIZE)
     
-    #plt.tight_layout()
     return fig
+
+def L0_unit_classification_confidence(
+    # Real parameters
+    real_params,
+    n_L1s,
+    n_L0s_per_L1,
+    n_children_per_L0,
+    n_children_L1,
+    # WHO parameters
+    haz_params,
+    waz_params,
+    whz_params_lying,
+    whz_params_standing,
+    # Analysis parameters
+    measurement_var,
+    measurement_unit,
+    n_L1_units_rewarded,
+    # Distortion parameters for L0s
+    real_percent_stunting=None,
+    real_percent_underweight=None,
+    real_percent_wasting=None,
+    mean_percent_under_reporting_stunting=30,
+    mean_percent_under_reporting_underweight=30,
+    mean_percent_under_reporting_wasting=None,
+    mean_bunch_factor_haz=0.1,
+    mean_bunch_factor_waz=0.1,
+    mean_bunch_factor_whz=0.1,
+    sd_across_units_percent_under_reporting_stunting=5,
+    sd_across_units_percent_under_reporting_underweight=5,
+    sd_across_units_percent_under_reporting_wasting=5,
+    sd_across_units_bunch_factor_haz=0.02,
+    sd_across_units_bunch_factor_waz=0.02,
+    sd_across_units_bunch_factor_whz=0.02,
+    sd_within_units_percent_under_reporting_stunting=2,
+    sd_within_units_percent_under_reporting_underweight=2,
+    sd_within_units_percent_under_reporting_wasting=2,
+    sd_within_units_bunch_factor_haz=0.01,
+    sd_within_units_bunch_factor_waz=0.01,
+    sd_within_units_bunch_factor_whz=0.01,
+    # Distortion parameters for L1s
+    mean_percent_copy=10,
+    mean_collusion_index=0.2,
+    sd_percent_copy=2,
+    sd_collusion_index=0.1,
+    random_seed=None,
+    n_simulations=100,  # Add n_simulations parameter
+    make_plots=False
+):
+    """
+    Analyze classification confidence for different parameter combinations.
+    
+    Args:
+        [Original args from generate_nested_measurements except L0_params_list, L1_params_list]
+        [All args from generate_nested_distortion_parameters]
+        measurement_var (str): Variable to analyze (e.g., 'weight', 'height')
+        measurement_unit (str): Unit of measurement (e.g., 'kg', 'cm')
+        n_L1_units_rewarded (int): Number of top L1 units to consider
+        n_simulations (int): Number of simulations to run for each parameter combination
+        make_plots (bool): Whether to show diagnostic plots
+    
+    Returns:
+        tuple: (DataFrame with results, plots)
+    """
+    # Convert inputs to lists if they're not already
+    n_L0s_list = [n_L0s_per_L1] if isinstance(n_L0s_per_L1, int) else n_L0s_per_L1
+    n_children_L0_list = [n_children_per_L0] if isinstance(n_children_per_L0, int) else n_children_per_L0
+    n_children_L1_list = [n_children_L1] if isinstance(n_children_L1, int) else n_children_L1
+    
+    # Check if n_L1_units_rewarded is valid
+    if n_L1_units_rewarded >= n_L1s:
+        raise ValueError(f"n_L1_units_rewarded ({n_L1_units_rewarded}) must be less than n_L1s ({n_L1s})")
+    
+    # Create empty lists to store results
+    results = []
+    
+    # Iterate over all combinations
+    for n_L0s in n_L0s_list:
+        for n_children_L0 in n_children_L0_list:
+            for n_children_L1 in n_children_L1_list:
+                sim_real_ranks = []
+                sim_overlaps = []
+                
+                # Run multiple simulations
+                for sim in range(n_simulations):
+                    # Generate distortion parameters
+                    L0_params_list, L1_params_list = generate_nested_distortion_parameters(
+                        n_L1s=n_L1s,
+                        n_L0s_per_L1=n_L0s,
+                        real_percent_stunting=real_percent_stunting,
+                        real_percent_underweight=real_percent_underweight,
+                        real_percent_wasting=real_percent_wasting,
+                        mean_percent_under_reporting_stunting=mean_percent_under_reporting_stunting,
+                        mean_percent_under_reporting_underweight=mean_percent_under_reporting_underweight,
+                        mean_percent_under_reporting_wasting=mean_percent_under_reporting_wasting,
+                        mean_bunch_factor_haz=mean_bunch_factor_haz,
+                        mean_bunch_factor_waz=mean_bunch_factor_waz,
+                        mean_bunch_factor_whz=mean_bunch_factor_whz,
+                        sd_across_units_percent_under_reporting_stunting=sd_across_units_percent_under_reporting_stunting,
+                        sd_across_units_percent_under_reporting_underweight=sd_across_units_percent_under_reporting_underweight,
+                        sd_across_units_percent_under_reporting_wasting=sd_across_units_percent_under_reporting_wasting,
+                        sd_across_units_bunch_factor_haz=sd_across_units_bunch_factor_haz,
+                        sd_across_units_bunch_factor_waz=sd_across_units_bunch_factor_waz,
+                        sd_across_units_bunch_factor_whz=sd_across_units_bunch_factor_whz,
+                        sd_within_units_percent_under_reporting_stunting=sd_within_units_percent_under_reporting_stunting,
+                        sd_within_units_percent_under_reporting_underweight=sd_within_units_percent_under_reporting_underweight,
+                        sd_within_units_percent_under_reporting_wasting=sd_within_units_percent_under_reporting_wasting,
+                        sd_within_units_bunch_factor_haz=sd_within_units_bunch_factor_haz,
+                        sd_within_units_bunch_factor_waz=sd_within_units_bunch_factor_waz,
+                        sd_within_units_bunch_factor_whz=sd_within_units_bunch_factor_whz,
+                        mean_percent_copy=mean_percent_copy,
+                        mean_collusion_index=mean_collusion_index,
+                        sd_percent_copy=sd_percent_copy,
+                        sd_collusion_index=sd_collusion_index,
+                        random_seed=random_seed+sim if random_seed else None
+                    )
+                    
+                    # Generate nested measurements
+                    nested_measurements = generate_nested_measurements(
+                        real_params=real_params,
+                        L0_params_list=L0_params_list,
+                        L1_params_list=L1_params_list,
+                        n_L1s=n_L1s,
+                        n_L0s_per_L1=n_L0s,
+                        n_children_per_L0=n_children_L0,
+                        n_children_L1=n_children_L1,
+                        haz_params=haz_params,
+                        waz_params=waz_params,
+                        whz_params_lying=whz_params_lying,
+                        whz_params_standing=whz_params_standing,
+                        make_plots=False
+                    )
+                    
+                    # Calculate ranks
+                    real_ranks, measured_ranks, _, _ = calculate_ranks_L0_units(
+                        nested_measurements, 
+                        measurement_var
+                    )
+                    
+                    # Find real rank of L1 unit with best measured rank
+                    best_measured_idx = np.argmin(measured_ranks)
+                    sim_real_ranks.append(real_ranks[best_measured_idx])
+                    
+                    # Find overlap between top units
+                    top_real = np.where(real_ranks <= n_L1_units_rewarded)[0]
+                    top_measured = np.where(measured_ranks <= n_L1_units_rewarded)[0]
+                    sim_overlaps.append(len(set(top_real) & set(top_measured)))
+                
+                # Store results with mean and SEM across simulations
+                results.append({
+                    'n_L0s_per_L1': n_L0s,
+                    'n_children_per_L0': n_children_L0,
+                    'n_children_L1': n_children_L1,
+                    'real_rank_mean': np.mean(sim_real_ranks),
+                    'real_rank_sem': np.std(sim_real_ranks) / np.sqrt(n_simulations),
+                    'n_overlap_mean': np.mean(sim_overlaps),
+                    'n_overlap_sem': np.std(sim_overlaps) / np.sqrt(n_simulations)
+                })
+    
+    # Convert results to DataFrame
+    results_df = pd.DataFrame(results)
+    
+    # Create plots
+    FONT_SIZE = 14
+    fig_list = []
+    
+    # Determine which parameters are varying
+    plot_vars = []
+    if len(n_L0s_list) > 1:
+        plot_vars.append('n_L0s_per_L1')
+    if len(n_children_L0_list) > 1:
+        plot_vars.append('n_children_per_L0')
+    if len(n_children_L1_list) > 1:
+        plot_vars.append('n_children_L1')
+    
+    # Colors for different parameter values
+    color_map = plt.cm.Dark2
+    
+    for var in plot_vars:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # Find other varying parameters
+        other_vars = [v for v in plot_vars if v != var]
+        
+        if other_vars:
+            # Plot lines for each value of the other parameter
+            other_var = other_vars[0]
+            other_values = sorted(results_df[other_var].unique())
+            colors = color_map(np.linspace(0, 1, len(other_values)))
+            
+            for i, val in enumerate(other_values):
+                mask = results_df[other_var] == val
+                x = results_df[mask][var]
+                
+                # Plot real rank
+                y = results_df[mask]['real_rank_mean']
+                yerr = results_df[mask]['real_rank_sem']
+                ax1.errorbar(x, y, yerr=yerr, fmt='o-', color=colors[i], 
+                           label=f'{other_var}={val}', linewidth=2, markersize=8)
+                
+                # Plot overlap
+                y = results_df[mask]['n_overlap_mean']
+                yerr = results_df[mask]['n_overlap_sem']
+                ax2.errorbar(x, y, yerr=yerr, fmt='o-', color=colors[i], 
+                           label=f'{other_var}={val}', linewidth=2, markersize=8)
+        else:
+            # Single line if no other parameters vary
+            x = results_df[var]
+            
+            # Plot real rank
+            y = results_df['real_rank_mean']
+            yerr = results_df['real_rank_sem']
+            ax1.errorbar(x, y, yerr=yerr, fmt='ko-', linewidth=2, markersize=8)
+            
+            # Plot overlap
+            y = results_df['n_overlap_mean']
+            yerr = results_df['n_overlap_sem']
+            ax2.errorbar(x, y, yerr=yerr, fmt='ko-', linewidth=2, markersize=8)
+        
+        # Set labels and formatting
+        ax1.set_xlabel(var.replace('_', ' ').title(), fontsize=FONT_SIZE)
+        ax1.set_ylabel('Real Rank of Best\nMeasured Unit', fontsize=FONT_SIZE)
+        ax1.tick_params(axis='both', labelsize=FONT_SIZE-2)
+        ax1.grid(True)
+        if other_vars:
+            ax1.legend(fontsize=FONT_SIZE-2)
+        
+        ax2.set_xlabel(var.replace('_', ' ').title(), fontsize=FONT_SIZE)
+        ax2.set_ylabel(f'Number of True Top {n_L1_units_rewarded}\nUnits Identified', fontsize=FONT_SIZE)
+        ax2.tick_params(axis='both', labelsize=FONT_SIZE-2)
+        ax2.grid(True)
+        if other_vars:
+            ax2.legend(fontsize=FONT_SIZE-2)
+        
+        plt.tight_layout()
+        fig_list.append(fig)
+    
+    return results_df, fig_list
