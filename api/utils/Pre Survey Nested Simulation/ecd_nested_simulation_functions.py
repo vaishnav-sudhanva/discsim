@@ -428,6 +428,54 @@ def generate_L0_distorted_measurements(
         axs[1, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
         axs[1, 4].set_title('WHZ Diff')
 
+        # Row 3: L1 - L2 differences
+
+        # Height difference scatter plot
+        axs[2, 0].scatter(x=L0_data['height'],
+                         y=distorted_measurements['data']['height'] - L0_data['height'],
+                         color='k', marker='.', alpha=0.1)
+        axs[2, 0].set_xlabel('L0 height (cm)')
+        axs[2, 0].set_ylabel('L2 - L0 height (cm)')
+        axs[2, 0].set_title('Height Diff (L2 - L0)')
+
+        # Weight difference scatter plot
+        axs[2, 1].scatter(x=L0_data['weight'],
+                         y=distorted_measurements['data']['weight'] - L0_data['weight'],
+                         color='k', marker='.', alpha=0.1)
+        axs[2, 1].set_xlabel('L0 weight (kg)')
+        axs[2, 1].set_ylabel('L2 - L0 weight (kg)')
+        axs[2, 1].set_title('Weight Diff (L2 - L0)')
+
+        # HAZ difference histogram
+        freq_L0, _ = np.histogram(L0_data['haz'], bins=bins_haz, density=False)
+        freq_L2, _ = np.histogram(distorted_measurements['data']['haz'], bins=bins_haz, density=False)
+        axs[2, 2].bar(x=bins_haz[:-1], height=freq_L2 - freq_L0, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[2, 2].set_xlabel('HAZ')
+        axs[2, 2].set_ylabel('Count: L2 - L0')
+        axs[2, 2].axhline(0, color='black', linestyle='--')
+        axs[2, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 2].set_title('HAZ Diff (L2 - L0)')
+
+        # WAZ difference histogram
+        freq_L0, _ = np.histogram(L0_data['waz'], bins=bins_waz, density=False)
+        freq_L2, _ = np.histogram(distorted_measurements['data']['waz'], bins=bins_waz, density=False)
+        axs[2, 3].bar(x=bins_waz[:-1], height=freq_L2 - freq_L0, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[2, 3].set_xlabel('WAZ')
+        axs[2, 3].set_ylabel('Count: L2 - L0')
+        axs[2, 3].axhline(0, color='black', linestyle='--')
+        axs[2, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 3].set_title('WAZ Diff (L2 - L0)')
+
+        # WHZ difference histogram
+        freq_L0, _ = np.histogram(L0_data['whz'], bins=bins_whz, density=False)
+        freq_L2, _ = np.histogram(distorted_measurements['data']['whz'], bins=bins_whz, density=False)
+        axs[2, 4].bar(x=bins_whz[:-1], height=freq_L2 - freq_L0, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[2, 4].set_xlabel('WHZ')
+        axs[2, 4].set_ylabel('Count: L2 - L0')
+        axs[2, 4].axhline(0, color='black', linestyle='--')
+        axs[2, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 4].set_title('WHZ Diff (L2 - L0)')
+
         # Make row 2 and 3 share y-axis scales for each metric
         for col in range(5):
             y_min = min(axs[1, col].get_ylim()[0], axs[2, col].get_ylim()[0])
@@ -438,7 +486,6 @@ def generate_L0_distorted_measurements(
         plt.tight_layout()
         plt.show()
 
-    # Return distorted data
     return distorted_measurements
 
 def generate_L1_distorted_measurements(
@@ -843,6 +890,320 @@ def generate_L1_distorted_measurements(
 
     return distorted_measurements
 
+def generate_L2_distorted_measurements(
+    real_measurements,
+    L0_measurements,
+    L1_measurements,
+    haz_params,
+    waz_params,
+    whz_params_lying,
+    whz_params_standing,
+    num_children_L2,
+    error_mean_height=0,
+    error_sd_height=1,
+    error_mean_weight=0,
+    error_sd_weight=0.1,
+    drift_mean_height=0,
+    drift_sd_height=0.1,
+    drift_mean_weight=0,
+    drift_sd_weight=0.05,
+    reporting_threshold=-2,
+    figsize=[15, 8],
+    make_plots=False
+):
+    """
+    Generate L2 distorted measurements by adding measurement error and data drift to real measurements.
+
+    Args:
+        real_measurements (dict): Real measurements dictionary.
+        L0_measurements (dict): L0 measurements dictionary (for plotting).
+        L1_measurements (dict): L1 measurements dictionary (must include 'L1_indices').
+        haz_params, waz_params, whz_params_lying, whz_params_standing: WHO parameters.
+        num_children_L2 (int): Number of children to be measured by L2.
+        error_mean_height, error_sd_height, error_mean_weight, error_sd_weight: Measurement error parameters.
+        drift_mean_height, drift_sd_height, drift_mean_weight, drift_sd_weight: Data drift parameters.
+        reporting_threshold (float): Z-score threshold for reporting.
+        figsize (list): Figure size for plots.
+        make_plots (bool): Whether to plot distributions.
+
+    Returns:
+        dict: Distorted L2 measurements dictionary.
+    """
+    L1_indices = L1_measurements['L1_indices']
+    if num_children_L2 > len(L1_indices):
+        raise ValueError("num_children_L2 exceeds the number of children measured by L1.")
+
+    L2_indices = np.random.choice(L1_indices, size=num_children_L2, replace=False)
+    distorted_measurements = {
+        'data': real_measurements['data'].loc[L2_indices].copy(),
+        'metadata': real_measurements['metadata'].copy(),
+        'L2_indices': L2_indices
+    }
+
+    # Add measurement error
+    distorted_measurements['data']['height'] = add_measurement_error(
+        distorted_measurements['data']['height'], error_mean=error_mean_height, error_sd=error_sd_height
+    )
+    distorted_measurements['data']['weight'] = add_measurement_error(
+        distorted_measurements['data']['weight'], error_mean=error_mean_weight, error_sd=error_sd_weight
+    )
+
+    # Add data drift
+    distorted_measurements['data']['height'] = add_data_drift(
+        distorted_measurements['data']['height'], drift_mean=drift_mean_height, drift_sd=drift_sd_height
+    )
+    distorted_measurements['data']['weight'] = add_data_drift(
+        distorted_measurements['data']['weight'], drift_mean=drift_mean_weight, drift_sd=drift_sd_weight
+    )
+
+    # Re-calculate HAZ, WAZ, WHZ
+    distorted_measurements['data']['haz'] = calculate_haz(
+        distorted_measurements['data']['height'],
+        distorted_measurements['data']['age'],
+        distorted_measurements['data']['gender'],
+        haz_params
+    )
+    distorted_measurements['data']['waz'] = calculate_waz(
+        distorted_measurements['data']['weight'],
+        distorted_measurements['data']['age'],
+        distorted_measurements['data']['gender'],
+        waz_params
+    )
+    distorted_measurements['data']['whz'] = calculate_whz(
+        distorted_measurements['data']['height'],
+        distorted_measurements['data']['weight'],
+        distorted_measurements['data']['gender'],
+        distorted_measurements['data']['loh'],
+        whz_params_lying,
+        whz_params_standing
+    )
+
+    if make_plots:
+        real_data = real_measurements['data'].loc[L2_indices]
+        L0_data = L0_measurements['data'].loc[L2_indices]
+        L1_data = L1_measurements['data'].loc[L2_indices]
+        L2_data = distorted_measurements['data']
+
+        font_size = 16
+        fig, axs = plt.subplots(3, 5, figsize=figsize, constrained_layout=True)
+
+        # Row 1: Overlapping histograms for real, L0, L1, L2
+        colors = ['#94979a', '#a226c1', '#26a269', '#e67e22']
+        labels = ['Real', 'L0', 'L1', 'L2']
+        datasets = [real_data, L0_data, L1_data, L2_data]
+        vars = ['height', 'weight', 'haz', 'waz', 'whz']
+        for col, var in enumerate(vars):
+            for i, data in enumerate(datasets):
+                sns.histplot(data[var], bins=30, kde=False, color=colors[i], label=labels[i],
+                             alpha=0.5, ax=axs[0, col])
+            axs[0, col].axvline(x=reporting_threshold, color='red', linestyle='--')
+            axs[0, col].set_title(var.upper(), fontsize=font_size)
+            axs[0, col].legend(fontsize=font_size-2)
+            axs[0, col].set_xlabel(var.capitalize(), fontsize=font_size)
+            axs[0, col].tick_params(axis='both', labelsize=font_size-2)
+
+        # Row 2: Real vs L2 scatter plots
+        axs[1, 0].scatter(real_data['height'], L2_data['height'],
+                          color='k', marker='.', alpha=0.1)
+        axs[1, 0].set_xlabel('Real height (cm)', fontsize=font_size)
+        axs[1, 0].set_ylabel('L2 height (cm)', fontsize=font_size)
+        axs[1, 0].set_title('Height: Real vs L2', fontsize=font_size)
+
+        axs[1, 1].scatter(real_data['weight'], L2_data['weight'],
+                          color='k', marker='.', alpha=0.1)
+        axs[1, 1].set_xlabel('Real weight (kg)', fontsize=font_size)
+        axs[1, 1].set_ylabel('L2 weight (kg)', fontsize=font_size)
+        axs[1, 1].set_title('Weight: Real vs L2', fontsize=font_size)
+
+        bins_haz = np.arange(min(real_data['haz'].min(), L2_data['haz'].min()),
+                             max(real_data['haz'].max(), L2_data['haz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['haz'], bins=bins_haz, density=False)
+        freq_L2, _ = np.histogram(L2_data['haz'], bins=bins_haz, density=False)
+        axs[1, 2].bar(x=bins_haz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[1, 2].set_xlabel('HAZ', fontsize=font_size)
+        axs[1, 2].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 2].axhline(0, color='black', linestyle='--')
+        axs[1, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 2].set_title('HAZ Diff', fontsize=font_size)
+
+        bins_waz = np.arange(min(real_data['waz'].min(), L2_data['waz'].min()),
+                             max(real_data['waz'].max(), L2_data['waz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['waz'], bins=bins_waz, density=False)
+        freq_L2, _ = np.histogram(L2_data['waz'], bins=bins_waz, density=False)
+        axs[1, 3].bar(x=bins_waz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[1, 3].set_xlabel('WAZ', fontsize=font_size)
+        axs[1, 3].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 3].axhline(0, color='black', linestyle='--')
+        axs[1, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 3].set_title('WAZ Diff', fontsize=font_size)
+
+        bins_whz = np.arange(min(real_data['whz'].min(), L2_data['whz'].min()),
+                             max(real_data['whz'].max(), L2_data['whz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['whz'], bins=bins_whz, density=False)
+        freq_L2, _ = np.histogram(L2_data['whz'], bins=bins_whz, density=False)
+        axs[1, 4].bar(x=bins_whz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[1, 4].set_xlabel('WHZ', fontsize=font_size)
+        axs[1, 4].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 4].axhline(0, color='black', linestyle='--')
+        axs[1, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 4].set_title('WHZ Diff', fontsize=font_size)
+
+        # Row 3: L1 vs L2 scatter plots
+        axs[2, 0].scatter(L1_data['height'], L2_data['height'],
+                          color='k', marker='.', alpha=0.1)
+        axs[2, 0].set_xlabel('L1 height (cm)', fontsize=font_size)
+        axs[2, 0].set_ylabel('L2 height (cm)', fontsize=font_size)
+        axs[2, 0].set_title('Height: L1 vs L2', fontsize=font_size)
+
+        axs[2, 1].scatter(L1_data['weight'], L2_data['weight'],
+                          color='k', marker='.', alpha=0.1)
+        axs[2, 1].set_xlabel('L1 weight (kg)', fontsize=font_size)
+        axs[2, 1].set_ylabel('L2 weight (kg)', fontsize=font_size)
+        axs[2, 1].set_title('Weight: L1 vs L2', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['haz'], bins=bins_haz, density=False)
+        freq_L2, _ = np.histogram(L2_data['haz'], bins=bins_haz, density=False)
+        axs[2, 2].bar(x=bins_haz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[2, 2].set_xlabel('HAZ', fontsize=font_size)
+        axs[2, 2].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 2].axhline(0, color='black', linestyle='--')
+        axs[2, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 2].set_title('HAZ Diff (L2 - L1)', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['waz'], bins=bins_waz, density=False)
+        freq_L2, _ = np.histogram(L2_data['waz'], bins=bins_waz, density=False)
+        axs[2, 3].bar(x=bins_waz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[2, 3].set_xlabel('WAZ', fontsize=font_size)
+        axs[2, 3].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 3].axhline(0, color='black', linestyle='--')
+        axs[2, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 3].set_title('WAZ Diff (L2 - L1)', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['whz'], bins=bins_whz, density=False)
+        freq_L2, _ = np.histogram(L2_data['whz'], bins=bins_whz, density=False)
+        axs[2, 4].bar(x=bins_whz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[2, 4].set_xlabel('WHZ', fontsize=font_size)
+        axs[2, 4].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 4].axhline(0, color='black', linestyle='--')
+        axs[2, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 4].set_title('WHZ Diff (L2 - L1)', fontsize=font_size)
+
+        plt.tight_layout()
+        plt.show()   if make_plots:
+        real_data = real_measurements['data'].loc[L2_indices]
+        L0_data = L0_measurements['data'].loc[L2_indices]
+        L1_data = L1_measurements['data'].loc[L2_indices]
+        L2_data = distorted_measurements['data']
+
+        font_size = 16
+        fig, axs = plt.subplots(3, 5, figsize=figsize, constrained_layout=True)
+
+        # Row 1: Overlapping histograms for real, L0, L1, L2
+        colors = ['#94979a', '#a226c1', '#26a269', '#e67e22']
+        labels = ['Real', 'L0', 'L1', 'L2']
+        datasets = [real_data, L0_data, L1_data, L2_data]
+        vars = ['height', 'weight', 'haz', 'waz', 'whz']
+        for col, var in enumerate(vars):
+            for i, data in enumerate(datasets):
+                sns.histplot(data[var], bins=30, kde=False, color=colors[i], label=labels[i],
+                             alpha=0.5, ax=axs[0, col])
+            axs[0, col].axvline(x=reporting_threshold, color='red', linestyle='--')
+            axs[0, col].set_title(var.upper(), fontsize=font_size)
+            axs[0, col].legend(fontsize=font_size-2)
+            axs[0, col].set_xlabel(var.capitalize(), fontsize=font_size)
+            axs[0, col].tick_params(axis='both', labelsize=font_size-2)
+
+        # Row 2: Real vs L2 differences
+        axs[1, 0].scatter(real_data['height'], L2_data['height'] - real_data['height'],
+                          color='k', marker='.', alpha=0.1)
+        axs[1, 0].set_xlabel('Real height (cm)', fontsize=font_size)
+        axs[1, 0].set_ylabel('L2 - Real height (cm)', fontsize=font_size)
+        axs[1, 0].set_title('Height Diff', fontsize=font_size)
+
+        axs[1, 1].scatter(real_data['weight'], L2_data['weight'] - real_data['weight'],
+                          color='k', marker='.', alpha=0.1)
+        axs[1, 1].set_xlabel('Real weight (kg)', fontsize=font_size)
+        axs[1, 1].set_ylabel('L2 - Real weight (kg)', fontsize=font_size)
+        axs[1, 1].set_title('Weight Diff', fontsize=font_size)
+
+        bins_haz = np.arange(min(real_data['haz'].min(), L2_data['haz'].min()),
+                             max(real_data['haz'].max(), L2_data['haz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['haz'], bins=bins_haz, density=False)
+        freq_L2, _ = np.histogram(L2_data['haz'], bins=bins_haz, density=False)
+        axs[1, 2].bar(x=bins_haz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[1, 2].set_xlabel('HAZ', fontsize=font_size)
+        axs[1, 2].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 2].axhline(0, color='black', linestyle='--')
+        axs[1, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 2].set_title('HAZ Diff', fontsize=font_size)
+
+        bins_waz = np.arange(min(real_data['waz'].min(), L2_data['waz'].min()),
+                             max(real_data['waz'].max(), L2_data['waz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['waz'], bins=bins_waz, density=False)
+        freq_L2, _ = np.histogram(L2_data['waz'], bins=bins_waz, density=False)
+        axs[1, 3].bar(x=bins_waz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[1, 3].set_xlabel('WAZ', fontsize=font_size)
+        axs[1, 3].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 3].axhline(0, color='black', linestyle='--')
+        axs[1, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 3].set_title('WAZ Diff', fontsize=font_size)
+
+        bins_whz = np.arange(min(real_data['whz'].min(), L2_data['whz'].min()),
+                             max(real_data['whz'].max(), L2_data['whz'].max()), 0.1)
+        freq_real, _ = np.histogram(real_data['whz'], bins=bins_whz, density=False)
+        freq_L2, _ = np.histogram(L2_data['whz'], bins=bins_whz, density=False)
+        axs[1, 4].bar(x=bins_whz[:-1], height=freq_L2 - freq_real, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[1, 4].set_xlabel('WHZ', fontsize=font_size)
+        axs[1, 4].set_ylabel('Count: L2 - Real', fontsize=font_size)
+        axs[1, 4].axhline(0, color='black', linestyle='--')
+        axs[1, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[1, 4].set_title('WHZ Diff', fontsize=font_size)
+
+        # Row 3: L1 vs L2 differences
+        axs[2, 0].scatter(L1_data['height'], L2_data['height'] - L1_data['height'],
+                          color='k', marker='.', alpha=0.1)
+        axs[2, 0].set_xlabel('L1 height (cm)', fontsize=font_size)
+        axs[2, 0].set_ylabel('L2 - L1 height (cm)', fontsize=font_size)
+        axs[2, 0].set_title('Height Diff (L2 - L1)', fontsize=font_size)
+
+        axs[2, 1].scatter(L1_data['weight'], L2_data['weight'] - L1_data['weight'],
+                          color='k', marker='.', alpha=0.1)
+        axs[2, 1].set_xlabel('L1 weight (kg)', fontsize=font_size)
+        axs[2, 1].set_ylabel('L2 - L1 weight (kg)', fontsize=font_size)
+        axs[2, 1].set_title('Weight Diff (L2 - L1)', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['haz'], bins=bins_haz, density=False)
+        freq_L2, _ = np.histogram(L2_data['haz'], bins=bins_haz, density=False)
+        axs[2, 2].bar(x=bins_haz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_haz), color='gray', alpha=0.7)
+        axs[2, 2].set_xlabel('HAZ', fontsize=font_size)
+        axs[2, 2].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 2].axhline(0, color='black', linestyle='--')
+        axs[2, 2].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 2].set_title('HAZ Diff (L2 - L1)', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['waz'], bins=bins_waz, density=False)
+        freq_L2, _ = np.histogram(L2_data['waz'], bins=bins_waz, density=False)
+        axs[2, 3].bar(x=bins_waz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_waz), color='gray', alpha=0.7)
+        axs[2, 3].set_xlabel('WAZ', fontsize=font_size)
+        axs[2, 3].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 3].axhline(0, color='black', linestyle='--')
+        axs[2, 3].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 3].set_title('WAZ Diff (L2 - L1)', fontsize=font_size)
+
+        freq_L1, _ = np.histogram(L1_data['whz'], bins=bins_whz, density=False)
+        freq_L2, _ = np.histogram(L2_data['whz'], bins=bins_whz, density=False)
+        axs[2, 4].bar(x=bins_whz[:-1], height=freq_L2 - freq_L1, width=np.diff(bins_whz), color='gray', alpha=0.7)
+        axs[2, 4].set_xlabel('WHZ', fontsize=font_size)
+        axs[2, 4].set_ylabel('Count: L2 - L1', fontsize=font_size)
+        axs[2, 4].axhline(0, color='black', linestyle='--')
+        axs[2, 4].axvline(x=reporting_threshold, color='red', linestyle='--')
+        axs[2, 4].set_title('WHZ Diff (L2 - L1)', fontsize=font_size)
+
+        plt.tight_layout()
+        plt.show()
+
+    return distorted_measurements
+
 def generate_bunched_data(threshold, original_data, percent_below_threshold_original, percent_below_threshold_bunched,
                           bunch_factor = 0.05, bin_size = 0.1):
     """
@@ -922,6 +1283,24 @@ def add_measurement_error(data, error_mean=0.5, error_sd=0.1):
     data_with_error += error
     
     return data_with_error
+
+def add_data_drift(data, drift_mean=0, drift_sd=0.1):
+    """
+    Add random data drift to measurements.
+
+    Args:
+        data (pd.Series or pd.DataFrame): Data to be drifted.
+        drift_mean (float): Mean of the normal distribution for drift.
+        drift_sd (float): Standard deviation of the normal distribution for drift.
+
+    Returns:
+        pd.Series or pd.DataFrame: Data with added drift.
+    """
+    data_with_drift = data.copy(deep=True)
+    drift = np.random.normal(loc=drift_mean, scale=drift_sd, size=len(data))
+    data_with_drift += drift
+
+    return data_with_drift
 
 def calculate_haz(height, age, sex, haz_params):
     """
