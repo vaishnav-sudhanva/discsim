@@ -879,7 +879,7 @@ def generate_L2_distorted_measurements(
         'L2_indices': L2_indices
     }
 
-    # Add measurement error
+    # Add measurement error to height and weight
     distorted_measurements['data']['height'] = add_measurement_error(
         distorted_measurements['data']['height'], error_mean=error_mean_height, error_sd=error_sd_height
     )
@@ -887,7 +887,7 @@ def generate_L2_distorted_measurements(
         distorted_measurements['data']['weight'], error_mean=error_mean_weight, error_sd=error_sd_weight
     )
 
-    # Add data drift
+    # Add data drift to height and weight
     distorted_measurements['data']['height'] = add_data_drift(
         distorted_measurements['data']['height'], drift_mean=drift_mean_height, drift_sd=drift_sd_height
     )
@@ -917,6 +917,7 @@ def generate_L2_distorted_measurements(
         whz_params_standing
     )
 
+    # Plot dummy data
     if make_plots:
         real_data = real_measurements['data'].loc[L2_indices]
         L0_data = L0_measurements['data'].loc[L2_indices]
@@ -1135,10 +1136,12 @@ def generate_nested_measurements(
         real_params,
         L0_params_list,  # List of dicts, one per L0
         L1_params_list,  # List of dicts, one per L1
+        L2_params_dict,  # Dict of params (assuming single L2)
         n_L1s,
         n_L0s_per_L1,
         n_children_per_L0,
         n_children_L1,
+        n_children_L2,
         haz_params,
         waz_params,
         whz_params_lying,
@@ -1151,6 +1154,7 @@ def generate_nested_measurements(
         real_params (dict): Parameters for generating real measurements
         L0_params_list (list): List of parameter dictionaries for L0 distortion, one per L0
         L1_params_list (list): List of parameter dictionaries for L1 distortion, one per L1
+        L2_params_dict (dict): Parameter dictionary for L2 distortion (assuming single L2)
         n_L1s (int): Number of L1 units
         n_L0s_per_L1 (int): Number of L0 units per L1
         n_children_per_L0 (int): Number of children per L0
@@ -1211,12 +1215,27 @@ def generate_nested_measurements(
                 whz_params_standing=whz_params_standing,
                 make_plots=make_plots
             )
+
+            # Generate L2 measurements for this specific L0
+            L2_measurements = generate_L2_distorted_measurements(
+                real_measurements=real_measurements,
+                L0_measurements=L0_measurements,
+                L1_measurements=L1_measurements,
+                haz_params=haz_params,
+                waz_params=waz_params,
+                whz_params_lying=whz_params_lying,
+                whz_params_standing=whz_params_standing,
+                num_children_L2=n_children_L2,
+                **L2_params_dict,
+                make_plots=make_plots
+            )
             
             # Store all measurements for this L0
             nested_measurements[f'L1_{L1_id}'][f'L0_{L0_id}'] = {
                 'real': real_measurements,
                 'L0': L0_measurements,
-                'L1': L1_measurements
+                'L1': L1_measurements,
+                'L2': L2_measurements
             }
             
             # Store L1 measurements separately to track which children were measured
@@ -1241,6 +1260,10 @@ def generate_nested_distortion_parameters(
         mean_bunch_factor_haz=0.1,
         mean_bunch_factor_waz=0.1,
         mean_bunch_factor_whz=0.1,
+        error_mean_height_all_L0s = 0,
+        error_sd_height_all_L0s = 1,
+        error_mean_weight_all_L0s = 0,
+        error_sd_weight_all_L0s = 0.1,
         # L0 parameter standard deviations across units
         sd_across_units_percent_under_reporting_stunting=5,
         sd_across_units_percent_under_reporting_underweight=5,
@@ -1260,6 +1283,22 @@ def generate_nested_distortion_parameters(
         mean_collusion_index=0.5,
         sd_percent_copy=2,
         sd_collusion_index=0.1,
+        error_mean_height_L1 = 0,
+        error_sd_height_L1 = 1,
+        error_mean_weight_L1 = 0,
+        error_sd_weight_L1 = 0.1,
+        bunch_factor_haz_L1 = 0.05,
+        bunch_factor_waz_L1 = 0.05,
+        bunch_factor_whz_L1 = 0.05,
+        # L2 parameters
+        error_mean_height_L2=0,
+        error_sd_height_L2=1,
+        error_mean_weight_L2=0,
+        error_sd_weight_L2=0.1,
+        drift_mean_height_L2=0,
+        drift_sd_height_L2=0.1,
+        drift_mean_weight_L2=0,
+        drift_sd_weight_L2=0.05,
         random_seed=None
     ):
     """Generate nested distortion parameters for L0s and L1s.
@@ -1274,7 +1313,7 @@ def generate_nested_distortion_parameters(
         random_seed (int): Random seed for reproducibility
         
     Returns:
-        tuple: (L0_params_list, L1_params_list) containing parameter dictionaries
+        tuple: (L0_params_list, L1_params_list, L2_params_dict) containing parameter dictionaries
     """
     
     if random_seed is not None:
@@ -1295,12 +1334,30 @@ def generate_nested_distortion_parameters(
             
     L0_params_list = []
     L1_params_list = []
+    L2_params_dict = {
+        'error_mean_height': error_mean_height_L2,
+        'error_sd_height': error_sd_height_L2,
+        'error_mean_weight': error_mean_weight_L2,
+        'error_sd_weight': error_sd_weight_L2,
+        'drift_mean_height': drift_mean_height_L2,
+        'drift_sd_height': drift_sd_height_L2,
+        'drift_mean_weight': drift_mean_weight_L2,
+        'drift_sd_weight': drift_sd_weight_L2
+    }
     
     # Generate L1 parameters
     for _ in range(n_L1s):
         L1_params = {
             'percent_copy': max(0, min(100, np.random.normal(mean_percent_copy, sd_percent_copy))),
-            'collusion_index': max(0, min(1, np.random.normal(mean_collusion_index, sd_collusion_index)))
+            'collusion_index': max(0, min(1, np.random.normal(mean_collusion_index, sd_collusion_index))),
+            'error_mean_height': error_mean_height_L1,
+            'error_sd_height': error_sd_height_L1,
+            'error_mean_weight': error_mean_weight_L1,
+            'error_sd_weight': error_sd_weight_L1,
+            'bunch_factor_haz': bunch_factor_haz_L1,
+            'bunch_factor_waz': bunch_factor_waz_L1,
+            'bunch_factor_whz': bunch_factor_whz_L1,
+
         }
         L1_params_list.append(L1_params)
     
@@ -1354,9 +1411,13 @@ def generate_nested_distortion_parameters(
                 'bunch_factor_waz': max(0, min(1, np.random.normal(unit_means['bunch_factor_waz'],
                                                                   sd_within_units_bunch_factor_waz))),
                 'bunch_factor_whz': max(0, min(1, np.random.normal(unit_means['bunch_factor_whz'],
-                                                                  sd_within_units_bunch_factor_whz)))
+                                                                  sd_within_units_bunch_factor_whz))),
+                'error_mean_height': error_mean_height_all_L0s,
+                'error_sd_height': error_sd_height_all_L0s,
+                'error_mean_weight': error_mean_weight_all_L0s,
+                'error_sd_weight': error_sd_weight_all_L0s
             }
             L0_params_list.append(L0_params)
     
-    return L0_params_list, L1_params_list
+    return L0_params_list, L1_params_list, L2_params_dict
 
