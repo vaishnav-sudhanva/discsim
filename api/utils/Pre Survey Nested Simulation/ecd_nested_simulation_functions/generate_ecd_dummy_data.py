@@ -1250,8 +1250,8 @@ def generate_nested_distortion_parameters(
         n_L1s, 
         n_L0s_per_L1,
         # Real percentages
-        real_percent_stunting=None,
-        real_percent_underweight=None,
+        real_percent_stunting=36,
+        real_percent_underweight=34,
         real_percent_wasting=None,
         # L0 parameter means
         mean_percent_under_reporting_stunting=30,

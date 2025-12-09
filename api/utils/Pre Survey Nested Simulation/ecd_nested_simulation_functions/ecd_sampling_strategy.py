@@ -169,6 +169,85 @@ def calculate_ranks_L0_units(nested_measurements, measurement_var, method='simpl
 
     return real_ranks, measured_ranks, unit_real_discrepancies, unit_measured_discrepancies
 
+def calculate_ranks_L0s(nested_measurements, measurement_var, method='simple_difference'):
+    """
+    Calculate real and measured ranks for L0s within each L1 unit based on discrepancy scores.
+    
+    Args:
+        nested_measurements (dict): Nested dictionary containing measurements structured as:
+            L1_id -> L0_id -> measurement_type -> measurements
+        measurement_var (str): Variable to calculate discrepancy scores for (e.g., 'weight', 'height')
+        method (str): Method to calculate discrepancy scores. Default: 'simple_difference'
+            
+    Returns:
+        dict: Dictionary with structure {L1_id: {'real_ranks': array, 'measured_ranks': array}}
+              where ranks are 1-based and in ascending order of discrepancy
+    """
+    L0_ranks = {}
+    
+    # Calculate ranks for L0s within each L1 unit
+    for L1_id in nested_measurements:
+        if L1_id == 'metadata':
+            continue
+        
+        # Store discrepancy scores for all L0s in this L1 unit
+        real_discrepancies = []
+        measured_discrepancies = []
+        L0_ids = []
+        
+        # Calculate discrepancy scores for each L0 in this L1 unit
+        for L0_id in nested_measurements[L1_id]:
+            if L0_id == 'L1_info':
+                continue
+            
+            L0_ids.append(L0_id)
+            
+            # Get measurements
+            real_meas = nested_measurements[L1_id][L0_id]['real']
+            L0_meas = nested_measurements[L1_id][L0_id]['L0']
+            L1_meas = nested_measurements[L1_id][L0_id]['L1']
+            
+            # Calculate real discrepancy (L0 vs real)
+            real_disc = calculate_discrepancy_scores(
+                L0_meas['data'],
+                real_meas['data'],
+                measurement_var,
+                method,
+                make_plot=False
+            )
+            real_discrepancies.append(abs(real_disc.mean()))
+            
+            # Calculate measured discrepancy (L0 vs L1)
+            # Only use children measured by L1
+            L1_indices = L1_meas['data'].index
+            L0_subset = L0_meas['data'].loc[L1_indices].copy()
+            
+            measured_disc = calculate_discrepancy_scores(
+                L0_subset,
+                L1_meas['data'],
+                measurement_var,
+                method,
+                make_plot=False
+            )
+            measured_discrepancies.append(abs(measured_disc.mean()))
+        
+        # Convert to arrays
+        real_discrepancies = np.array(real_discrepancies)
+        measured_discrepancies = np.array(measured_discrepancies)
+        
+        # Calculate ranks (1-based ranking, ascending order of discrepancy)
+        real_ranks = real_discrepancies.argsort().argsort() + 1
+        measured_ranks = measured_discrepancies.argsort().argsort() + 1
+        
+        # Store ranks for this L1 unit
+        L0_ranks[L1_id] = {
+            'real_ranks': real_ranks,
+            'measured_ranks': measured_ranks,
+            'L0_ids': L0_ids
+        }
+    
+    return L0_ranks
+
 def plot_nested_measurements_and_ranks(nested_measurements, measurement_var, measurement_unit, 
                                      real_discrepancies, measured_discrepancies,
                                      real_ranks, measured_ranks, figsize=(15, 6)):
@@ -287,6 +366,7 @@ def L0_unit_classification_confidence(
     n_L0s_per_L1,
     n_children_per_L0,
     n_children_L1,
+    n_children_L2,
     # WHO parameters
     haz_params,
     waz_params,
@@ -294,11 +374,10 @@ def L0_unit_classification_confidence(
     whz_params_standing,
     # Analysis parameters
     measurement_var,
-    measurement_unit,
     n_L1_units_rewarded,
     # Distortion parameters for L0s
-    real_percent_stunting=None,
-    real_percent_underweight=None,
+    real_percent_stunting=40,
+    real_percent_underweight=40,
     real_percent_wasting=None,
     mean_percent_under_reporting_stunting=20,
     mean_percent_under_reporting_underweight=20,
@@ -323,9 +402,25 @@ def L0_unit_classification_confidence(
     mean_collusion_index=0.2,
     sd_percent_copy=2,
     sd_collusion_index=0.1,
+    error_mean_height_L1 = 0,
+    error_sd_height_L1 = 1,
+    error_mean_weight_L1 = 0,
+    error_sd_weight_L1 = 0.1,
+    bunch_factor_haz_L1 = 0.05,
+    bunch_factor_waz_L1 = 0.05,
+    bunch_factor_whz_L1 = 0.05,
+    # Distortion parameters for L2
+    error_mean_height_L2=0,
+    error_sd_height_L2=1,
+    error_mean_weight_L2=0,
+    error_sd_weight_L2=0.1,
+    drift_mean_height_L2=0,
+    drift_sd_height_L2=0.1,
+    drift_mean_weight_L2=0,
+    drift_sd_weight_L2=0.05,
+
     random_seed=None,
     n_simulations=100,  # Add n_simulations parameter
-    make_plots=False
 ):
     """
     Analyze classification confidence for different parameter combinations.
@@ -354,7 +449,7 @@ def L0_unit_classification_confidence(
     # Create empty lists to store results
     results = []
     
-    # Iterate over all combinations
+    # Iterate over all parameter combinations
     for n_L0s in n_L0s_list:
         for n_children_L0 in n_children_L0_list:
             for n_children_L1 in n_children_L1_list:
@@ -366,34 +461,55 @@ def L0_unit_classification_confidence(
                 # Run multiple simulations
                 for sim in range(n_simulations):
                     # Generate distortion parameters
-                    L0_params_list, L1_params_list = generate_nested_distortion_parameters(
+                    L0_params_list, L1_params_list, L2_params_dict = generate_nested_distortion_parameters(
                         n_L1s=n_L1s,
                         n_L0s_per_L1=n_L0s,
+                        # Real percentages
                         real_percent_stunting=real_percent_stunting,
                         real_percent_underweight=real_percent_underweight,
                         real_percent_wasting=real_percent_wasting,
+                        # L0 parameter means
                         mean_percent_under_reporting_stunting=mean_percent_under_reporting_stunting,
                         mean_percent_under_reporting_underweight=mean_percent_under_reporting_underweight,
                         mean_percent_under_reporting_wasting=mean_percent_under_reporting_wasting,
                         mean_bunch_factor_haz=mean_bunch_factor_haz,
                         mean_bunch_factor_waz=mean_bunch_factor_waz,
                         mean_bunch_factor_whz=mean_bunch_factor_whz,
+                        # L0 parameter standard deviations across units
                         sd_across_units_percent_under_reporting_stunting=sd_across_units_percent_under_reporting_stunting,
                         sd_across_units_percent_under_reporting_underweight=sd_across_units_percent_under_reporting_underweight,
                         sd_across_units_percent_under_reporting_wasting=sd_across_units_percent_under_reporting_wasting,
                         sd_across_units_bunch_factor_haz=sd_across_units_bunch_factor_haz,
                         sd_across_units_bunch_factor_waz=sd_across_units_bunch_factor_waz,
                         sd_across_units_bunch_factor_whz=sd_across_units_bunch_factor_whz,
+                        # L0 parameter standard deviations within units
                         sd_within_units_percent_under_reporting_stunting=sd_within_units_percent_under_reporting_stunting,
                         sd_within_units_percent_under_reporting_underweight=sd_within_units_percent_under_reporting_underweight,
                         sd_within_units_percent_under_reporting_wasting=sd_within_units_percent_under_reporting_wasting,
                         sd_within_units_bunch_factor_haz=sd_within_units_bunch_factor_haz,
                         sd_within_units_bunch_factor_waz=sd_within_units_bunch_factor_waz,
                         sd_within_units_bunch_factor_whz=sd_within_units_bunch_factor_whz,
+                        # L1 parameters
                         mean_percent_copy=mean_percent_copy,
                         mean_collusion_index=mean_collusion_index,
                         sd_percent_copy=sd_percent_copy,
                         sd_collusion_index=sd_collusion_index,
+                        error_mean_height_L1 =error_mean_height_L1,
+                        error_sd_height_L1 = error_sd_height_L1,
+                        error_mean_weight_L1 = error_mean_weight_L1,
+                        error_sd_weight_L1 = error_sd_weight_L1,
+                        bunch_factor_haz_L1 = bunch_factor_haz_L1,
+                        bunch_factor_waz_L1 = bunch_factor_waz_L1,
+                        bunch_factor_whz_L1 = bunch_factor_whz_L1,
+                        # L2 parameters
+                        error_mean_height_L2=error_mean_height_L2,
+                        error_sd_height_L2=error_sd_height_L2,
+                        error_mean_weight_L2=error_mean_weight_L2,
+                        error_sd_weight_L2=error_sd_weight_L2,
+                        drift_mean_height_L2=drift_mean_height_L2,
+                        drift_sd_height_L2=drift_sd_height_L2,
+                        drift_mean_weight_L2=drift_mean_weight_L2,
+                        drift_sd_weight_L2=drift_sd_weight_L2,
                         random_seed=random_seed+sim if random_seed else None
                     )
                     
@@ -402,10 +518,12 @@ def L0_unit_classification_confidence(
                         real_params=real_params,
                         L0_params_list=L0_params_list,
                         L1_params_list=L1_params_list,
+                        L2_params_dict=L2_params_dict,
                         n_L1s=n_L1s,
                         n_L0s_per_L1=n_L0s,
                         n_children_per_L0=n_children_L0,
                         n_children_L1=n_children_L1,
+                        n_children_L2=n_children_L2,
                         haz_params=haz_params,
                         waz_params=waz_params,
                         whz_params_lying=whz_params_lying,
@@ -491,6 +609,27 @@ def L0_unit_classification_confidence(
     # Convert results to DataFrame
     results_df = pd.DataFrame(results)
     
+    return results_df
+
+def plot_L0_unit_classification_confidence_vs_parameters(
+    n_L0s_list,
+    n_children_L0_list,
+    n_children_L1_list,
+    results_df,
+    n_L1_units_rewarded
+):
+    
+    """
+    Plot classification confidence results from L0_unit_classification_confidence function.
+    
+    Args:
+        results_df (pd.DataFrame): DataFrame with results from L0_unit_classification_confidence
+
+    Returns:
+        fig_list (list): List of matplotlib Figure objects
+
+    """
+
     # Create plots
     FONT_SIZE = 14
     fig_list = []
@@ -565,5 +704,234 @@ def L0_unit_classification_confidence(
         
         plt.tight_layout()
         fig_list.append(fig)
+
+    return fig_list
+
+def L0_classification_confidence_vs_L2_L1_discrepancy(
+    # Real parameters
+    real_params,
+    n_L1s,
+    n_L0s_per_L1,
+    n_children_per_L0,
+    n_children_L1,
+    n_children_L2,
+    # WHO parameters
+    haz_params,
+    waz_params,
+    whz_params_lying,
+    whz_params_standing,
+    # Analysis parameters
+    measurement_var,
+    n_L0s_rewarded_per_L1,
+    discrepancy_method='simple_difference',
+    # Distortion parameters for L0s
+    real_percent_stunting=40,
+    real_percent_underweight=40,
+    real_percent_wasting=None,
+    mean_percent_under_reporting_stunting=20,
+    mean_percent_under_reporting_underweight=20,
+    mean_percent_under_reporting_wasting=None,
+    mean_bunch_factor_haz=0.1,
+    mean_bunch_factor_waz=0.1,
+    mean_bunch_factor_whz=0.1,
+    sd_across_units_percent_under_reporting_stunting=5,
+    sd_across_units_percent_under_reporting_underweight=5,
+    sd_across_units_percent_under_reporting_wasting=5,
+    sd_across_units_bunch_factor_haz=0.02,
+    sd_across_units_bunch_factor_waz=0.02,
+    sd_across_units_bunch_factor_whz=0.02,
+    sd_within_units_percent_under_reporting_stunting=2,
+    sd_within_units_percent_under_reporting_underweight=2,
+    sd_within_units_percent_under_reporting_wasting=2,
+    sd_within_units_bunch_factor_haz=0.01,
+    sd_within_units_bunch_factor_waz=0.01,
+    sd_within_units_bunch_factor_whz=0.01,
+    # Distortion parameters for L1s
+    mean_percent_copy=10,
+    mean_collusion_index=0.2,
+    sd_percent_copy=2,
+    sd_collusion_index=0.1,
+    error_mean_height_L1=0,
+    error_sd_height_L1=1,
+    error_mean_weight_L1=0,
+    error_sd_weight_L1=0.1,
+    bunch_factor_haz_L1=0.05,
+    bunch_factor_waz_L1=0.05,
+    bunch_factor_whz_L1=0.05,
+    # Distortion parameters for L2
+    error_mean_height_L2=0,
+    error_sd_height_L2=1,
+    error_mean_weight_L2=0,
+    error_sd_weight_L2=0.1,
+    drift_mean_height_L2=0,
+    drift_sd_height_L2=0.1,
+    drift_mean_weight_L2=0,
+    drift_sd_weight_L2=0.05,
+    random_seed=None,
+    n_simulations=100,
+):
+    """
+    Analyze L0 classification confidence versus L2-L1 discrepancy scores.
     
-    return results_df, fig_list
+    Args:
+        [Same as L0_unit_classification_confidence except n_L1_units_rewarded replaced with n_L0s_rewarded_per_L1]
+        n_L0s_rewarded_per_L1 (int): Number of top L0s to reward within each L1 unit
+        discrepancy_method (str): Method to calculate discrepancy scores
+        
+    Returns:
+        tuple: (n_real_L0s_rewarded, L2_L1_discrepancies, fig)
+    """
+    # Validation
+    if n_L0s_rewarded_per_L1 > n_L0s_per_L1:
+        raise ValueError(f"n_L0s_rewarded_per_L1 ({n_L0s_rewarded_per_L1}) must be <= n_L0s_per_L1 ({n_L0s_per_L1})")
+    
+    # Initialize lists
+    n_real_L0s_rewarded = []
+    L2_L1_discrepancies = []
+    warning_count = 0
+    
+    # Generate distortion parameters
+    L0_params_list, L1_params_list, L2_params_dict = generate_nested_distortion_parameters(
+        n_L1s=n_L1s,
+        n_L0s_per_L1=n_L0s_per_L1,
+        # Real percentages
+        real_percent_stunting=real_percent_stunting,
+        real_percent_underweight=real_percent_underweight,
+        real_percent_wasting=real_percent_wasting,
+        # L0 parameter means
+        mean_percent_under_reporting_stunting=mean_percent_under_reporting_stunting,
+        mean_percent_under_reporting_underweight=mean_percent_under_reporting_underweight,
+        mean_percent_under_reporting_wasting=mean_percent_under_reporting_wasting,
+        mean_bunch_factor_haz=mean_bunch_factor_haz,
+        mean_bunch_factor_waz=mean_bunch_factor_waz,
+        mean_bunch_factor_whz=mean_bunch_factor_whz,
+        # L0 parameter standard deviations across units
+        sd_across_units_percent_under_reporting_stunting=sd_across_units_percent_under_reporting_stunting,
+        sd_across_units_percent_under_reporting_underweight=sd_across_units_percent_under_reporting_underweight,
+        sd_across_units_percent_under_reporting_wasting=sd_across_units_percent_under_reporting_wasting,
+        sd_across_units_bunch_factor_haz=sd_across_units_bunch_factor_haz,
+        sd_across_units_bunch_factor_waz=sd_across_units_bunch_factor_waz,
+        sd_across_units_bunch_factor_whz=sd_across_units_bunch_factor_whz,
+        # L0 parameter standard deviations within units
+        sd_within_units_percent_under_reporting_stunting=sd_within_units_percent_under_reporting_stunting,
+        sd_within_units_percent_under_reporting_underweight=sd_within_units_percent_under_reporting_underweight,
+        sd_within_units_percent_under_reporting_wasting=sd_within_units_percent_under_reporting_wasting,
+        sd_within_units_bunch_factor_haz=sd_within_units_bunch_factor_haz,
+        sd_within_units_bunch_factor_waz=sd_within_units_bunch_factor_waz,
+        sd_within_units_bunch_factor_whz=sd_within_units_bunch_factor_whz,
+        # L1 parameters
+        mean_percent_copy=mean_percent_copy,
+        mean_collusion_index=mean_collusion_index,
+        sd_percent_copy=sd_percent_copy,
+        sd_collusion_index=sd_collusion_index,
+        error_mean_height_L1=error_mean_height_L1,
+        error_sd_height_L1=error_sd_height_L1,
+        error_mean_weight_L1=error_mean_weight_L1,
+        error_sd_weight_L1=error_sd_weight_L1,
+        bunch_factor_haz_L1=bunch_factor_haz_L1,
+        bunch_factor_waz_L1=bunch_factor_waz_L1,
+        bunch_factor_whz_L1=bunch_factor_whz_L1,
+        # L2 parameters
+        error_mean_height_L2=error_mean_height_L2,
+        error_sd_height_L2=error_sd_height_L2,
+        error_mean_weight_L2=error_mean_weight_L2,
+        error_sd_weight_L2=error_sd_weight_L2,
+        drift_mean_height_L2=drift_mean_height_L2,
+        drift_sd_height_L2=drift_sd_height_L2,
+        drift_mean_weight_L2=drift_mean_weight_L2,
+        drift_sd_weight_L2=drift_sd_weight_L2,
+        random_seed=random_seed
+    )
+    
+    # Run simulations
+    for sim in range(n_simulations):
+        # Generate nested measurements
+        nested_measurements = generate_nested_measurements(
+            real_params=real_params,
+            L0_params_list=L0_params_list,
+            L1_params_list=L1_params_list,
+            L2_params_dict=L2_params_dict,
+            n_L1s=n_L1s,
+            n_L0s_per_L1=n_L0s_per_L1,
+            n_children_per_L0=n_children_per_L0,
+            n_children_L1=n_children_L1,
+            n_children_L2=n_children_L2,
+            haz_params=haz_params,
+            waz_params=waz_params,
+            whz_params_lying=whz_params_lying,
+            whz_params_standing=whz_params_standing,
+            make_plots=False
+        )
+        
+        # Check for warnings
+        warning_found = False
+        for L1_id in nested_measurements:
+            if L1_id == 'metadata':
+                continue
+            
+            for L0_id in nested_measurements[L1_id]:
+                if L0_id == 'L1_info':
+                    continue
+                
+                # Check L0 warnings
+                for measure in ['haz', 'waz', 'whz']:
+                    warning_key = f'bunching_warning_{measure}'
+                    if nested_measurements[L1_id][L0_id]['L0']['metadata'].get(warning_key, False):
+                        warning_found = True
+                        break
+                    if nested_measurements[L1_id][L0_id]['L1']['metadata'].get(warning_key, False):
+                        warning_found = True
+                        break
+                if warning_found:
+                    break
+            if warning_found:
+                break
+        
+        if warning_found:
+            warning_count += 1
+        
+        # Calculate L0 ranks within each L1 unit
+        L0_ranks = calculate_ranks_L0s(nested_measurements, measurement_var, method=discrepancy_method)
+        
+        # Calculate overlap and L2-L1 discrepancy for each L1 unit
+        for L1_id in L0_ranks:
+            real_ranks = L0_ranks[L1_id]['real_ranks']
+            measured_ranks = L0_ranks[L1_id]['measured_ranks']
+            
+            # Find overlap in top n_L0s_rewarded_per_L1
+            top_real = np.where(real_ranks <= n_L0s_rewarded_per_L1)[0]
+            top_measured = np.where(measured_ranks <= n_L0s_rewarded_per_L1)[0]
+            overlap = len(set(top_real) & set(top_measured))
+            n_real_L0s_rewarded.append(overlap)
+            
+            # Calculate L2-L1 discrepancy for this L1 unit
+            L1_data = 
+            L2_data = 
+            
+            # Get L2 indices (children measured by L2)
+            
+            
+            disc = calculate_discrepancy_scores(
+                L1_subset,
+                L2_data,
+                measurement_var,
+                discrepancy_method,
+                make_plot=False
+            )
+            L2_L1_discrepancies.append(abs(disc.mean()))
+    
+    # Print warning statistics
+    if warning_count > 0:
+        print(f"\nWarning: Percent shift was too high in {warning_count} out of {n_simulations} simulations")
+    
+    # Create scatter plot
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(L2_L1_discrepancies, n_real_L0s_rewarded, alpha=0.5, s=50, color='steelblue')
+    ax.set_xlabel(f'L2-L1 Discrepancy ({measurement_var})', fontsize=14)
+    ax.set_ylabel(f'Number of True Top {n_L0s_rewarded_per_L1} L0s Identified', fontsize=14)
+    ax.set_title('L0 Classification Confidence vs L2-L1 Discrepancy', fontsize=16)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', labelsize=12)
+    plt.tight_layout()
+    
+    return n_real_L0s_rewarded, L2_L1_discrepancies, fig
