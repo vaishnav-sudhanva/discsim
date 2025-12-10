@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from .generate_ecd_dummy_data import generate_nested_distortion_parameters
 from .generate_ecd_dummy_data import generate_nested_measurements
+from .generate_ecd_dummy_data import get_L1_L2_pairwise_data
 
 def calculate_discrepancy_scores(measurements1, measurements2, variable, method, 
                                make_plot=False, plot_title=None,
@@ -734,6 +735,10 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
     mean_bunch_factor_haz=0.1,
     mean_bunch_factor_waz=0.1,
     mean_bunch_factor_whz=0.1,
+    error_mean_height_all_L0s = 0,
+    error_sd_height_all_L0s = 1,
+    error_mean_weight_all_L0s = 0,
+    error_sd_weight_all_L0s = 0.1,
     sd_across_units_percent_under_reporting_stunting=5,
     sd_across_units_percent_under_reporting_underweight=5,
     sd_across_units_percent_under_reporting_wasting=5,
@@ -788,63 +793,72 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
     # Initialize lists
     n_real_L0s_rewarded = []
     L2_L1_discrepancies = []
+    params = {
+        'percent_copy': [],
+        'collusion_index': []
+    }
     warning_count = 0
-    
-    # Generate distortion parameters
-    L0_params_list, L1_params_list, L2_params_dict = generate_nested_distortion_parameters(
-        n_L1s=n_L1s,
-        n_L0s_per_L1=n_L0s_per_L1,
-        # Real percentages
-        real_percent_stunting=real_percent_stunting,
-        real_percent_underweight=real_percent_underweight,
-        real_percent_wasting=real_percent_wasting,
-        # L0 parameter means
-        mean_percent_under_reporting_stunting=mean_percent_under_reporting_stunting,
-        mean_percent_under_reporting_underweight=mean_percent_under_reporting_underweight,
-        mean_percent_under_reporting_wasting=mean_percent_under_reporting_wasting,
-        mean_bunch_factor_haz=mean_bunch_factor_haz,
-        mean_bunch_factor_waz=mean_bunch_factor_waz,
-        mean_bunch_factor_whz=mean_bunch_factor_whz,
-        # L0 parameter standard deviations across units
-        sd_across_units_percent_under_reporting_stunting=sd_across_units_percent_under_reporting_stunting,
-        sd_across_units_percent_under_reporting_underweight=sd_across_units_percent_under_reporting_underweight,
-        sd_across_units_percent_under_reporting_wasting=sd_across_units_percent_under_reporting_wasting,
-        sd_across_units_bunch_factor_haz=sd_across_units_bunch_factor_haz,
-        sd_across_units_bunch_factor_waz=sd_across_units_bunch_factor_waz,
-        sd_across_units_bunch_factor_whz=sd_across_units_bunch_factor_whz,
-        # L0 parameter standard deviations within units
-        sd_within_units_percent_under_reporting_stunting=sd_within_units_percent_under_reporting_stunting,
-        sd_within_units_percent_under_reporting_underweight=sd_within_units_percent_under_reporting_underweight,
-        sd_within_units_percent_under_reporting_wasting=sd_within_units_percent_under_reporting_wasting,
-        sd_within_units_bunch_factor_haz=sd_within_units_bunch_factor_haz,
-        sd_within_units_bunch_factor_waz=sd_within_units_bunch_factor_waz,
-        sd_within_units_bunch_factor_whz=sd_within_units_bunch_factor_whz,
-        # L1 parameters
-        mean_percent_copy=mean_percent_copy,
-        mean_collusion_index=mean_collusion_index,
-        sd_percent_copy=sd_percent_copy,
-        sd_collusion_index=sd_collusion_index,
-        error_mean_height_L1=error_mean_height_L1,
-        error_sd_height_L1=error_sd_height_L1,
-        error_mean_weight_L1=error_mean_weight_L1,
-        error_sd_weight_L1=error_sd_weight_L1,
-        bunch_factor_haz_L1=bunch_factor_haz_L1,
-        bunch_factor_waz_L1=bunch_factor_waz_L1,
-        bunch_factor_whz_L1=bunch_factor_whz_L1,
-        # L2 parameters
-        error_mean_height_L2=error_mean_height_L2,
-        error_sd_height_L2=error_sd_height_L2,
-        error_mean_weight_L2=error_mean_weight_L2,
-        error_sd_weight_L2=error_sd_weight_L2,
-        drift_mean_height_L2=drift_mean_height_L2,
-        drift_sd_height_L2=drift_sd_height_L2,
-        drift_mean_weight_L2=drift_mean_weight_L2,
-        drift_sd_weight_L2=drift_sd_weight_L2,
-        random_seed=random_seed
-    )
     
     # Run simulations
     for sim in range(n_simulations):
+
+        # Generate distortion parameters
+        L0_params_list, L1_params_list, L2_params_dict = generate_nested_distortion_parameters(
+            n_L1s=n_L1s,
+            n_L0s_per_L1=n_L0s_per_L1,
+            # Real percentages
+            real_percent_stunting=real_percent_stunting,
+            real_percent_underweight=real_percent_underweight,
+            real_percent_wasting=real_percent_wasting,
+            # L0 parameter means
+            mean_percent_under_reporting_stunting=mean_percent_under_reporting_stunting,
+            mean_percent_under_reporting_underweight=mean_percent_under_reporting_underweight,
+            mean_percent_under_reporting_wasting=mean_percent_under_reporting_wasting,
+            mean_bunch_factor_haz=mean_bunch_factor_haz,
+            mean_bunch_factor_waz=mean_bunch_factor_waz,
+            mean_bunch_factor_whz=mean_bunch_factor_whz,
+            error_mean_height_all_L0s = error_mean_height_all_L0s,
+            error_sd_height_all_L0s = error_sd_height_all_L0s,
+            error_mean_weight_all_L0s = error_mean_weight_all_L0s,
+            error_sd_weight_all_L0s = error_sd_weight_all_L0s,
+            # L0 parameter standard deviations across units
+            sd_across_units_percent_under_reporting_stunting=sd_across_units_percent_under_reporting_stunting,
+            sd_across_units_percent_under_reporting_underweight=sd_across_units_percent_under_reporting_underweight,
+            sd_across_units_percent_under_reporting_wasting=sd_across_units_percent_under_reporting_wasting,
+            sd_across_units_bunch_factor_haz=sd_across_units_bunch_factor_haz,
+            sd_across_units_bunch_factor_waz=sd_across_units_bunch_factor_waz,
+            sd_across_units_bunch_factor_whz=sd_across_units_bunch_factor_whz,
+            # L0 parameter standard deviations within units
+            sd_within_units_percent_under_reporting_stunting=sd_within_units_percent_under_reporting_stunting,
+            sd_within_units_percent_under_reporting_underweight=sd_within_units_percent_under_reporting_underweight,
+            sd_within_units_percent_under_reporting_wasting=sd_within_units_percent_under_reporting_wasting,
+            sd_within_units_bunch_factor_haz=sd_within_units_bunch_factor_haz,
+            sd_within_units_bunch_factor_waz=sd_within_units_bunch_factor_waz,
+            sd_within_units_bunch_factor_whz=sd_within_units_bunch_factor_whz,
+            # L1 parameters
+            mean_percent_copy=mean_percent_copy,
+            mean_collusion_index=mean_collusion_index,
+            sd_percent_copy=sd_percent_copy,
+            sd_collusion_index=sd_collusion_index,
+            error_mean_height_L1=error_mean_height_L1,
+            error_sd_height_L1=error_sd_height_L1,
+            error_mean_weight_L1=error_mean_weight_L1,
+            error_sd_weight_L1=error_sd_weight_L1,
+            bunch_factor_haz_L1=bunch_factor_haz_L1,
+            bunch_factor_waz_L1=bunch_factor_waz_L1,
+            bunch_factor_whz_L1=bunch_factor_whz_L1,
+            # L2 parameters
+            error_mean_height_L2=error_mean_height_L2,
+            error_sd_height_L2=error_sd_height_L2,
+            error_mean_weight_L2=error_mean_weight_L2,
+            error_sd_weight_L2=error_sd_weight_L2,
+            drift_mean_height_L2=drift_mean_height_L2,
+            drift_sd_height_L2=drift_sd_height_L2,
+            drift_mean_weight_L2=drift_mean_weight_L2,
+            drift_sd_weight_L2=drift_sd_weight_L2,
+            random_seed=random_seed
+        )
+    
         # Generate nested measurements
         nested_measurements = generate_nested_measurements(
             real_params=real_params,
@@ -862,7 +876,8 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
             whz_params_standing=whz_params_standing,
             make_plots=False
         )
-        
+        L1_L2_pairwise_data = get_L1_L2_pairwise_data(nested_measurements)
+
         # Check for warnings
         warning_found = False
         for L1_id in nested_measurements:
@@ -894,7 +909,9 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
         L0_ranks = calculate_ranks_L0s(nested_measurements, measurement_var, method=discrepancy_method)
         
         # Calculate overlap and L2-L1 discrepancy for each L1 unit
+        L1_no = 0
         for L1_id in L0_ranks:
+
             real_ranks = L0_ranks[L1_id]['real_ranks']
             measured_ranks = L0_ranks[L1_id]['measured_ranks']
             
@@ -904,21 +921,22 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
             overlap = len(set(top_real) & set(top_measured))
             n_real_L0s_rewarded.append(overlap)
             
-            # Calculate L2-L1 discrepancy for this L1 unit
-            L1_data = 
-            L2_data = 
-            
-            # Get L2 indices (children measured by L2)
-            
+            # Calculate L2-L1 discrepancy for this L1 unit            
             
             disc = calculate_discrepancy_scores(
-                L1_subset,
-                L2_data,
+                L1_L2_pairwise_data[L1_id]['L1'],
+                L1_L2_pairwise_data[L1_id]['L2'],
                 measurement_var,
                 discrepancy_method,
                 make_plot=False
             )
             L2_L1_discrepancies.append(abs(disc.mean()))
+
+            # Store L1 parameters for this L1 unit
+            params['percent_copy'].append(L1_params_list[L1_no]['percent_copy'])
+            params['collusion_index'].append(L1_params_list[L1_no]['collusion_index'])
+
+            L1_no += 1
     
     # Print warning statistics
     if warning_count > 0:
@@ -934,4 +952,4 @@ def L0_classification_confidence_vs_L2_L1_discrepancy(
     ax.tick_params(axis='both', labelsize=12)
     plt.tight_layout()
     
-    return n_real_L0s_rewarded, L2_L1_discrepancies, fig
+    return n_real_L0s_rewarded, L2_L1_discrepancies, params, fig

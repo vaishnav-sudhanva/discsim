@@ -220,9 +220,9 @@ def generate_L0_distorted_measurements(
         
         # Throw an error if percent under-reporting for stunting or underweight exceeds the actual percent stunting or underweight
         if percent_under_reporting_stunting > real_measurements['metadata']['percent_stunting']:
-            raise ValueError("Percent under-reporting for stunting exceeds actual percent stunting.")
+            percent_under_reporting_stunting = real_measurements['metadata']['percent_stunting']
         if percent_under_reporting_underweight > real_measurements['metadata']['percent_underweight']:
-            raise ValueError("Percent under-reporting for underweight exceeds actual percent underweight.")
+            percent_under_reporting_underweight = real_measurements['metadata']['percent_underweight']
 
         # Under-reporting for stunting
         distorted_measurements['data']['haz'], distorted_measurements['metadata']['bunching_warning_haz'] = generate_bunched_data(threshold=reporting_threshold,
@@ -1421,3 +1421,61 @@ def generate_nested_distortion_parameters(
     
     return L0_params_list, L1_params_list, L2_params_dict
 
+def get_L1_L2_pairwise_data(nested_measurements):
+    """
+    Extract pairwise L1 and L2 measurements for each L1 unit.
+    
+    Args:
+        nested_measurements (dict): Output from generate_nested_measurements()
+        
+    Returns:
+        dict: Dictionary with structure {L1_id: {'L1': array, 'L2': array}} containing
+              pairwise measurements for children measured by both L1 and L2
+    """
+    
+    pairwise_data = {}
+    
+    for L1_id in nested_measurements:
+        if L1_id == 'metadata':
+            continue
+            
+        # Collect L1 and L2 data from all L0s within this L1 unit
+        all_L1_data = []
+        all_L2_data = []
+        
+        for L0_id in nested_measurements[L1_id]:
+            if L0_id == 'L1_info':
+                continue
+                
+            # Get L1, L2 data and L2 indices for this L0
+            L1_data_from_L0 = nested_measurements[L1_id][L0_id]['L1']['data']
+            L2_data_from_L0 = nested_measurements[L1_id][L0_id]['L2']['data']
+            L2_indices_from_L0 = nested_measurements[L1_id][L0_id]['L2']['L2_indices']
+            
+            # Filter L1 data to only include children measured by L2 in this L0
+            L1_subset = L1_data_from_L0.loc[L2_indices_from_L0]
+            
+            # Append filtered data
+            all_L1_data.append(L1_subset)
+            all_L2_data.append(L2_data_from_L0)
+        
+        # Combine all L1 and L2 data for this L1 unit
+        combined_L1_data = pd.concat(all_L1_data, ignore_index=False)
+        combined_L2_data = pd.concat(all_L2_data, ignore_index=False)
+        
+        # Sort by index to ensure same order
+        L1_measurements = combined_L1_data.sort_index()
+        L2_measurements = combined_L2_data.sort_index()
+                
+        # Verify they have the same length
+        if len(L1_measurements) != len(L2_measurements):
+            raise ValueError(f"Mismatch in number of measurements for {L1_id}: "
+                           f"L1 has {len(L1_measurements)}, L2 has {len(L2_measurements)}")
+        
+        # Store pairwise data
+        pairwise_data[L1_id] = {
+            'L1': L1_measurements,
+            'L2': L2_measurements
+        }
+    
+    return pairwise_data
