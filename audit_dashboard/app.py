@@ -16,17 +16,22 @@ st.set_page_config(page_title="Audit Optimization Dashboard", layout="wide")
 
 @st.cache_data
 def load_data():
-    # Automatically grab the latest Tracer Percentage CSV
-    csv_files = glob.glob("Tracer_Master_DB_Percentages_*.csv")
+    # 1. Find the exact folder where app.py lives
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 2. Tell it to look for the CSV specifically in that folder
+    search_pattern = os.path.join(current_dir, "Tracer_Master_DB_Percentages_*.csv")
+    csv_files = glob.glob(search_pattern)
+    
     if not csv_files:
         return None
     latest_csv = max(csv_files, key=os.path.getctime)
     df = pd.read_csv(latest_csv)
-
+    
     # Clean percentages to integers for easier plotting
     df['L1_Pct_Num'] = df['L1_Budget_Pct'].str.replace('%', '').astype(int)
     df['L2_Pct_Num'] = df['L2_Budget_Pct'].str.replace('%', '').astype(int)
-
+    
     # Rename universes to analytical names
     df['Universe'] = df['Universe'].replace({
         "Utopia": "Good L0 Good L1",
@@ -35,9 +40,9 @@ def load_data():
         "Mafia": "Bad L0 Bad L1",
         "Normal": "Normal"
     })
-
+    
     return df
-
+    
 df = load_data()
 if df is None:
     st.error("❌ No data found. Please run the Grand Master Engine first to generate the CSV.")
