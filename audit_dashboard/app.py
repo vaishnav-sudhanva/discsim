@@ -413,33 +413,106 @@ with tab1:
 <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
 <h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Global Diagnostic Power</h4>
 
-<b>1. Setup & Universe Inputs:</b><br>
-This module uses Monte Carlo pathways across a 266k global population. We test 5 Universes: <b>Normal</b> (real-world measurement errors), <b>Utopia</b> (fully honest), <b>Blind Spot</b> (honest clinics, lazy supervisors), <b>Whistleblowers</b> (corrupt clinics, honest supervisors), and <b>Mafia</b> (systemic corruption).<br><br>
+<b>1. Setup & Universe Input Parameters:</b><br>
+This module evaluates a simulated global population of 266,000 children. To isolate the effects of operational behavior, we tested four absolute "Zero-Error" environments alongside one "Normal" environment featuring realistic human measurement variance.
+<br><br>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; margin-bottom: 15px;">
+    <thead>
+        <tr style="background-color: #e9ecef; border-bottom: 2px solid #cbd5e1;">
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Parameter</th>
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Good L0 + Good L1</th>
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Good L0 + Bad L1</th>
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Bad L0 + Good L1</th>
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Bad L0 + Bad L1</th>
+            <th style="padding: 8px; border: 1px solid #dee2e6;">Normal (Real-World)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">Core Assumption</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">L1 ranking of L0 matches reality perfectly.</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">Honest L0 data means L1 desk audits are accidentally accurate.</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">Honest L1 instantly detects L0 fraud.</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">High collusion; necessitates L2 intervention.</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">Realistic mix of fraud, laziness, and equipment noise.</td>
+        </tr>
+        <tr style="background-color: #f8f9fa;">
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">True Stunting / Underweight</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">35% / 33%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">35% / 33%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">35% / 33%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">35% / 33%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">36% / 34%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">L0 Under-Reporting</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">5%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">5%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">30%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">30%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">30%</td>
+        </tr>
+        <tr style="background-color: #f8f9fa;">
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">L0 Bunching Factor</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.05</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.05</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.60</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.60</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.20</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">L1 Copying Rate</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">5%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">60%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">5%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">60%</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">20%</td>
+        </tr>
+        <tr style="background-color: #f8f9fa;">
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">L1 Collusion Index</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.05</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.80</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.05</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.80</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.50</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #dee2e6; font-weight: bold;">Measurement Error</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.0</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.0</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.0</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">0.0</td>
+            <td style="padding: 8px; border: 1px solid #dee2e6;">1.0 cm / 0.1 kg</td>
+        </tr>
+    </tbody>
+</table>
 
 <b>2. Variables & Mathematical Calculation:</b><br>
-<i>X-Axis:</i> <b>L1 Base Budget</b>. The percentage of the maximum possible kids L1 is funded to measure (Max = 375 kids across 25 clinics).<br>
+<i>X-Axis:</i> <b>L1 Base Budget</b>. The percentage of the target population L1 is funded to measure (Max = 375 children across 25 clinics).<br>
 <i>Y-Axis:</i> <b>Global Overlap Accuracy (V1)</b>. <br>
-<i>Calculation:</i> We calculate God's Truth globally: <code>abs(L1_haz - real_haz)</code> to find the true Top 100 worst supervisors. We then calculate L1's view of the world. The Y-Axis is the percentage of the true Top 100 that L1 successfully caught based on their limited sample. L1 is judged against the <b>entire global population</b>.<br><br>
+<i>Calculation:</i> We calculate Measured Rank and Real Rank. The Measured Rank is obtained by calculating <code>abs(L1 HAZ Score - L0 HAZ Score)</code> (of children sampled by L1 only) and then ranking the L1 Regions from worst to best (Descending Order) to identify the actual lowest-performing L1 supervisors. The Real Rank is obtained by calculating <code>abs(L1 HAZ Score - Real HAZ Score)</code> (of all children) for each region and ranking them in descending order. The Y-Axis represents the percentage of the overlap between the Measured & Real Ranking L1 Regions.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-We are testing L1's ability to diagnose systemic issues when they can only see a fraction of the region. Our hypothesis is that L1 Global Accuracy will scale linearly with their budget. Furthermore, corrupt universes (Mafia) should be easier to detect than honest ones (Utopia) due to the massive mathematical gap between honest mistakes (~0.13 error) and blatant fraud (~0.35 error).<br><br>
+This plot tests the capability of the L1 supervisor to diagnose systemic failure when observing only a localized fraction of the total region. The hypothesis is that Global Accuracy will scale linearly with sample size.<br><br>
 
 <b>4. Results & Analysis:</b><br>
-The results confirm our hypothesis but reveal a critical asymptote. As budget increases, detection rises, but it flattens out. In the <b>Normal</b> universe, natural human measurement noise prevents L1 from perfectly ranking borderline cases, creating a natural ceiling. In corrupt universes, the "signal" of fraud is loud enough that a 60% budget captures almost all the worst offenders.<br><br>
+The results confirm the structural hypothesis but indicate a performance asymptote. As the base budget increases, the detection rate rises before ultimately flattening out. In the <b>Normal</b> environment, natural measurement variance ($\pm$ 1.0cm) prevents perfect ranking of borderline cases, creating a strict upper bound. Conversely, in highly manipulated environments, the delta between accurate data and fabricated data is statistically significant enough that a 60% sample budget captures the majority of critical failures.<br><br>
 
 <b>5. Conclusion & Implications:</b><br>
-To understand the true state of a region, L1 requires a minimum base budget of ~60%. Below this threshold, the supervisor simply leaves too many clinics completely unobserved (Blind Spots), and no amount of L2 auditing can recover that lost global intelligence.<br><br>
+To accurately diagnose the global state of a region, the L1 operational budget must meet a minimum threshold of ~60%. Below this threshold, unobserved geographical blind spots severely degrade diagnostic power. This loss of primary intelligence cannot be mathematically recovered by subsequent L2 auditing.<br><br>
 
 <b>6. Assurance of Robustness:</b><br>
-By testing against "Zero-Error" universes, we isolated pure sampling limitations from human clumsiness. The curves hold structurally sound across all edge cases.<br><br>
+By plotting zero-error environments against the normal environment, the simulation isolates physical sampling limitations from human measurement error. The structural bounds remain consistent across all permutations.<br><br>
 
 <b>7. Open Questions for Discussion:</b><br>
 <ul>
-<li>What is our acceptable threshold for Global Accuracy? If 80% accuracy costs twice as much as 60% accuracy, is the marginal intelligence worth the budget?</li>
-<li>How can we proactively identify which universes our real-world districts fall into?</li>
+<li>What is the acceptable programmatic threshold for Global Accuracy? If an 80% accuracy rate requires double the operational funding of a 60% accuracy rate, is the marginal gain in intelligence cost-effective?</li>
+<li>What primary indicators can be utilized to pre-determine which operational universe a physical district currently occupies?</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
+    
 
 with tab2:
     st.markdown("### 🎯 L1 Intra-Regional (Targeted) Accuracy")
@@ -455,7 +528,7 @@ with tab2:
 <h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Intra-Regional (Targeted) Accuracy</h4>
 
 <b>1. Setup & Universe Inputs:</b><br>
-Using the same 266k population and 5 baseline Universes, this chart shifts the perspective from Global Intelligence to Local Operations.<br><br>
+Using the same 266k population and 5 baseline Universes, this visual shifts the perspective from L1 Regions to Local L0 AWC centers.<br><br>
 
 <b>2. Variables & Mathematical Calculation:</b><br>
 <i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum capacity).<br>
@@ -463,7 +536,7 @@ Using the same 266k population and 5 baseline Universes, this chart shifts the p
 <i>Calculation:</i> We compare the clinic's register to L1's measurement: <code>abs(L1_haz - L0_haz)</code>. Crucially, <b>L1 is ONLY evaluated on the specific clinics they actually visited.</b> We ask: "Within the specific clinics L1 sampled, did they successfully catch the top 30% worst clinics?"<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-We are testing L1's localized competence. Our hypothesis is that because L1 is no longer being penalized for clinics they didn't visit, their accuracy will be significantly higher and much less dependent on budget scaling than Plot 1.<br><br>
+We are testing L1's localized competence. Our hypothesis is that because L1 is not focuing on visiting all L0 centers, the accuracy will be significantly higher and much less dependent on budget scaling than Plot 1.<br><br>
 
 <b>4. Results & Analysis:</b><br>
 The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Because the denominator shrinks to match L1's sample size, an L1 supervisor with a 20% budget appears highly accurate within their tiny footprint. The mathematical logic holds: if you only check 5 clinics, it is relatively easy to rank those 5 clinics accurately.<br><br>
@@ -512,24 +585,23 @@ This module filters for a specific L2 Budget (e.g., 20%) and a specific Universe
 For a fixed budget, does an auditor catch more fraud by visiting 20 clinics (measuring 1 kid each) or visiting 1 clinic (measuring 20 kids)? Our hypothesis is that Breadth (visiting more clinics) will drastically outperform Depth, because data manipulation is usually clustered at the clinic level, not evenly distributed among kids.<br><br>
 
 <b>4. Results & Analysis:</b><br>
-The data unequivocally confirms the hypothesis. Every single line slopes downward as you move from left (Breadth) to right (Depth). When L2 groups all their audits into just a few clinics (right side of the chart), their accuracy plummets, even though they are spending the exact same amount of money and measuring the exact same number of children.<br><br>
+The delta is not significant enough to confirm our hypothesis that sampling more L0 yields a better result. We can confirm that increasing the budget of L1 improves the ranking accuracy. Across different sensitivities, we can confirm that measurement error in "Normal" universe adds a lot of noise during measurements, which disrupts the ranking accuracy.<br><br>
 
 <b>5. Conclusion & Implications:</b><br>
-Audit logic must prioritize the number of geographical points visited, not the volume of kids measured at each point. A "Deep" audit is functionally useless for ranking supervisors because it leaves too many clinics completely unverified.<br><br>
+Based on the current results, we are not able to conclude anything with significane. we see a slight increase in accuracy of rankings when more L0 are sampled.<br><br>
 
-<b>6. Assurance of Robustness:</b><br>
-This downward slope holds true across all Universes and all L1 baseline budgets. In systemic corruption cases (Mafia), the penalty for choosing Depth over Breadth is even more severe.<br><br>
 
-<b>7. Open Questions for Discussion:</b><br>
+<b>6. Open Questions for Discussion:</b><br>
 <ul>
 <li>Given that traveling to 20 different clinics is logistically more expensive than staying at 1 clinic, how do we adjust the travel budget to explicitly fund "Breadth" over "Depth"?</li>
 <li>Should we program constraints into the field app that mathematically prevent auditors from measuring more than a set number of kids per clinic?</li>
+<li>Should we use other metric (other than MAE) to calculate the rankings?</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
 with tab4:
-    st.markdown("### L2 Robustness by L1 Budget")
+    st.markdown("### L2 Ranking L1 by L1 Budget")
     sel_uni_t4 = st.selectbox("Select Universe", options=df['Universe'].unique(), key='t4_uni', index=list(df['Universe'].unique()).index("Normal") if "Normal" in df['Universe'].unique() else 0)
     fig4 = plot_4_robustness(df, v3_col, selected_metric_label, sel_uni_t4)
     if fig4: st.pyplot(fig4)
@@ -539,7 +611,7 @@ with tab4:
 <h4 style="margin-top: 0;">📊 Analytical Narrative: The Limits of the L2 Auditor</h4>
 
 <b>1. Setup & Flow:</b><br>
-Using 30 Monte Carlo pathways across a 266k population dataset, we simulate an L2 Auditor evaluating an L1 Supervisor's spreadsheet. We demonstrate L2's detection ceiling as their budget expands.<br><br>
+We simulate an L2 Auditor evaluating an L1 Supervisor's Measurement. We demonstrate L2's detection ceiling as their budget expands.<br><br>
 
 <b>2. Objective & Key Message:</b><br>
 We are testing L2's diagnostic success as their Audit Budget (X-Axis) increases. The key takeaway: Increasing L2 audits improves detection heavily, but permanently caps at ~85%. An auditor can perfectly catch massive fraud, but their own "clumsy" measurement noise prevents them from perfectly ranking borderline cases.<br><br>
