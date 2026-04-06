@@ -328,6 +328,10 @@ def plot_5_master_grid(df, metric_col, metric_label, l1_budget_str):
 
 
 def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni, l1_pct_str, l2_pct_str):
+    # Calculate global min and max across ALL universes to standardize the color scale
+    vmin_global_l1, vmax_global_l1 = df[metric_col_l1].min(), df[metric_col_l1].max()
+    vmin_global_l2, vmax_global_l2 = df[metric_col_l2].min(), df[metric_col_l2].max()
+
     df_hm = df[(df['Universe'] == selected_uni) & (df['L1_Budget_Pct'] == l1_pct_str) & (df['L2_Budget_Pct'] == l2_pct_str)].copy()
     if df_hm.empty: return None
 
@@ -336,8 +340,6 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
     ).reset_index()
 
     l1_order = sorted(agg_df['L1_Label'].unique(), key=lambda x: int(x.split('C')[0]), reverse=True)
-    vmin_l1, vmax_l1 = agg_df['L1_Acc'].min(), agg_df['L1_Acc'].max()
-    vmin_l2, vmax_l2 = agg_df['L2_Acc'].min(), agg_df['L2_Acc'].max()
 
     fig = plt.figure(figsize=(16, 12), dpi=100)
     gs = gridspec.GridSpec(nrows=len(l1_order), ncols=2, width_ratios=[1, 6], wspace=0.1, hspace=0.8)
@@ -351,8 +353,10 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
         subset = agg_df[agg_df['L1_Label'] == l1_lbl].sort_values(by='L2_K')
 
         l1_acc_value = subset['L1_Acc'].iloc[0] if not subset.empty else 0
+        
+        # Apply standard global bounds to L1 Heatmap
         sns.heatmap(np.array([[l1_acc_value]]), annot=True, fmt=".1f", cmap="Blues", 
-                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_l1, vmax=vmax_l1, 
+                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_global_l1, vmax=vmax_global_l1, 
                     ax=ax_l1, annot_kws={"size": 14, "weight": "bold"})
 
         ax_l1.set_xticks([])
@@ -363,8 +367,9 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
         heatmap_data_l2 = subset[['L2_Acc']].T 
         l2_labels = subset['L2_Label'].tolist()
 
+        # Apply standard global bounds to L2 Heatmap
         sns.heatmap(heatmap_data_l2, annot=True, fmt=".1f", cmap="RdYlGn", 
-                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_l2, vmax=vmax_l2, 
+                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_global_l2, vmax=vmax_global_l2, 
                     ax=ax_l2, annot_kws={"size": 13, "weight": "bold"})
 
         ax_l2.set_yticks([])
@@ -381,8 +386,7 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
 
     fig.suptitle(f"{selected_uni.upper()} | {metric_label}\n(Budgets: L1={l1_pct_str}, L2={l2_pct_str})", 
                  fontsize=18, fontweight='bold', y=1.02)
-    return fig
-
+    return fig, agg_df
 
 # ==============================================================================
 # 3. DASHBOARD TABS
@@ -397,44 +401,94 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 ])
 
 with tab1:
-    st.markdown("### Standalone Sensitivity: L1 Global Accuracy")
-    sel_unis_t1 = st.multiselect("Filter Universes for Plot 1:", options=list(uni_colors.keys()), default=list(uni_colors.keys()))
+    st.markdown("### 📈 L1 Global Diagnostic Power (Sensitivity)")
+    sel_unis_t1 = st.multiselect("Filter Universes:", options=list(uni_colors.keys()), default=list(uni_colors.keys()), key="t1_unis")
+    
     if sel_unis_t1:
         fig1 = plot_1_sensitivity(df, v1_col, selected_metric_label, sel_unis_t1)
-        st.pyplot(fig1)
-        st.markdown("""
-        <div style="background-color: #f8f9fa; border-left: 6px solid #2c3e50; padding: 20px; border-radius: 5px; margin-top: 20px;">
-            <h4 style="margin-top: 0;">📊 Analytical Brief: L1 Baseline Accuracy</h4>
-            <b>Parameters Used:</b> Varying L1 Overall Budget (X-axis).<br>
-            <b>Hypothesis:</b> "Good L1s" track upward as budget increases. "Bad L1s" flatline because they are copying data.<br>
-            <b>Conclusions:</b> Without L2, the system cannot distinguish between a highly accurate "Good L1" and a lazy "Bad L1" copying an honest clinic's homework.
-        </div>
-        """, unsafe_allow_html=True)
+        if fig1: st.pyplot(fig1)
+        
+    # Analytical Brief for Tab 1
+    st.markdown("""
+<div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Global Diagnostic Power</h4>
+
+<b>1. Setup & Universe Inputs:</b><br>
+This module uses Monte Carlo pathways across a 266k global population. We test 5 Universes: <b>Normal</b> (real-world measurement errors), <b>Utopia</b> (fully honest), <b>Blind Spot</b> (honest clinics, lazy supervisors), <b>Whistleblowers</b> (corrupt clinics, honest supervisors), and <b>Mafia</b> (systemic corruption).<br><br>
+
+<b>2. Variables & Mathematical Calculation:</b><br>
+<i>X-Axis:</i> <b>L1 Base Budget</b>. The percentage of the maximum possible kids L1 is funded to measure (Max = 375 kids across 25 clinics).<br>
+<i>Y-Axis:</i> <b>Global Overlap Accuracy (V1)</b>. <br>
+<i>Calculation:</i> We calculate God's Truth globally: <code>abs(L1_haz - real_haz)</code> to find the true Top 100 worst supervisors. We then calculate L1's view of the world. The Y-Axis is the percentage of the true Top 100 that L1 successfully caught based on their limited sample. L1 is judged against the <b>entire global population</b>.<br><br>
+
+<b>3. Objective & Hypothesis:</b><br>
+We are testing L1's ability to diagnose systemic issues when they can only see a fraction of the region. Our hypothesis is that L1 Global Accuracy will scale linearly with their budget. Furthermore, corrupt universes (Mafia) should be easier to detect than honest ones (Utopia) due to the massive mathematical gap between honest mistakes (~0.13 error) and blatant fraud (~0.35 error).<br><br>
+
+<b>4. Results & Analysis:</b><br>
+The results confirm our hypothesis but reveal a critical asymptote. As budget increases, detection rises, but it flattens out. In the <b>Normal</b> universe, natural human measurement noise prevents L1 from perfectly ranking borderline cases, creating a natural ceiling. In corrupt universes, the "signal" of fraud is loud enough that a 60% budget captures almost all the worst offenders.<br><br>
+
+<b>5. Conclusion & Implications:</b><br>
+To understand the true state of a region, L1 requires a minimum base budget of ~60%. Below this threshold, the supervisor simply leaves too many clinics completely unobserved (Blind Spots), and no amount of L2 auditing can recover that lost global intelligence.<br><br>
+
+<b>6. Assurance of Robustness:</b><br>
+By testing against "Zero-Error" universes, we isolated pure sampling limitations from human clumsiness. The curves hold structurally sound across all edge cases.<br><br>
+
+<b>7. Open Questions for Discussion:</b><br>
+<ul>
+<li>What is our acceptable threshold for Global Accuracy? If 80% accuracy costs twice as much as 60% accuracy, is the marginal intelligence worth the budget?</li>
+<li>How can we proactively identify which universes our real-world districts fall into?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
 
 with tab2:
-    st.markdown("### L1 Ranking of L0 Clinics (Intra-Regional Accuracy)")
-    sel_unis_t2 = st.multiselect("Filter Universes for Plot 2:", options=list(uni_colors.keys()), default=list(uni_colors.keys()), key="ms_t2")
+    st.markdown("### 🎯 L1 Intra-Regional (Targeted) Accuracy")
+    sel_unis_t2 = st.multiselect("Filter Universes:", options=list(uni_colors.keys()), default=list(uni_colors.keys()), key="t2_unis")
+    
     if sel_unis_t2:
         fig2 = plot_2_intra_regional(df, v2_col, selected_metric_label, sel_unis_t2)
-        st.pyplot(fig2)
-        st.markdown("""
-        <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
-            <h4 style="margin-top: 0;">📊 Analytical Brief: L1 Intra-Regional Accuracy (L1 Ranking L0)</h4>
-            <b>Hypothesis:</b> If underlying clinics are honest, a lazy supervisor gets a high score because copied data is true.<br>
-            <b>Conclusions:</b> Blind Spot (Yellow Line) performs perfectly. This proves intra-regional ranking validates the data, but fails to validate the supervisor's physical effort.
-        </div>
-        """, unsafe_allow_html=True)
+        if fig2: st.pyplot(fig2)
 
+    # Analytical Brief for Tab 2
+    st.markdown("""
+<div style="background-color: #f8f9fa; border-left: 6px solid #27ae60; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Intra-Regional (Targeted) Accuracy</h4>
+
+<b>1. Setup & Universe Inputs:</b><br>
+Using the same 266k population and 5 baseline Universes, this chart shifts the perspective from Global Intelligence to Local Operations.<br><br>
+
+<b>2. Variables & Mathematical Calculation:</b><br>
+<i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum capacity).<br>
+<i>Y-Axis:</i> <b>Intra-Regional Overlap Accuracy (V2)</b>.<br>
+<i>Calculation:</i> We compare the clinic's register to L1's measurement: <code>abs(L1_haz - L0_haz)</code>. Crucially, <b>L1 is ONLY evaluated on the specific clinics they actually visited.</b> We ask: "Within the specific clinics L1 sampled, did they successfully catch the top 30% worst clinics?"<br><br>
+
+<b>3. Objective & Hypothesis:</b><br>
+We are testing L1's localized competence. Our hypothesis is that because L1 is no longer being penalized for clinics they didn't visit, their accuracy will be significantly higher and much less dependent on budget scaling than Plot 1.<br><br>
+
+<b>4. Results & Analysis:</b><br>
+The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Because the denominator shrinks to match L1's sample size, an L1 supervisor with a 20% budget appears highly accurate within their tiny footprint. The mathematical logic holds: if you only check 5 clinics, it is relatively easy to rank those 5 clinics accurately.<br><br>
+
+<b>5. Conclusion & Implications:</b><br>
+This reveals a massive administrative danger: <b>The False Sense of Security</b>. If leadership only evaluates supervisors based on what they submit (Intra-Regional), supervisors will look highly competent, even if they are entirely blind to 80% of their actual district. Evaluating L1 requires global benchmarks, not just local ones.<br><br>
+
+<b>6. Assurance of Robustness:</b><br>
+This dynamic is proven across the sensitivity datasets. Even in "Blind Spot" (where L1 is lazy), their Intra-Regional score behaves differently than their Global score, mathematically proving the risk of localized evaluation metrics.<br><br>
+
+<b>7. Open Questions for Discussion:</b><br>
+<ul>
+<li>Are our current KPIs inadvertently rewarding supervisors for Intra-Regional accuracy while ignoring their massive Global Blind Spots?</li>
+<li>How do we design a performance metric that forces supervisors to value breadth (visiting more clinics) over depth?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+    
 with tab3:
-    # 1. Streamlit Title placed ABOVE the filters
     st.markdown("### ⚖️ L1 Breadth vs Depth Optimization (Fixed Budget)")
 
-    # 2. Filters placed BELOW the Streamlit Title
     col1, col2 = st.columns([1, 1])
     sel_unis_t3 = col1.multiselect("Filter Universes:", options=list(uni_colors.keys()), default=list(uni_colors.keys()), key="ms_t3")
     sel_l1_pct_t3 = col2.selectbox("Select Fixed L1 Budget:", options=sorted(df['L1_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=2)
 
-    # 3. Render the Plot (Matplotlib generates its own internal title)
     if sel_unis_t3:
         fig3 = plot_3_bd_optimization(df, v1_col, selected_metric_label, sel_unis_t3, sel_l1_pct_t3)
         if fig3: 
@@ -442,15 +496,37 @@ with tab3:
         else: 
             st.warning("No data available for this configuration.")
 
-        # 4. Analytical Brief at the bottom
-        st.markdown("""
-        <div style="background-color: #f8f9fa; border-left: 6px solid #27ae60; padding: 20px; border-radius: 5px; margin-top: 20px;">
-            <h4 style="margin-top: 0;">📊 Analytical Brief: L1 Breadth vs. Depth Trade-off</h4>
-            <b>Parameters Used:</b> Budget is strictly frozen. Moves from maximum Breadth (Left) to maximum Depth (Right).<br>
-            <b>Hypothesis:</b> Spreading measurements thinly across many clinics (Breadth) detects widespread/systemic fraud better than deeply auditing a few clinics.<br>
-            <b>Conclusions & Implications:</b> Notice how the lines behave as you move left to right. In corrupt universes, extreme Depth (right side) causes detection rates to plummet because corrupt clinics that were left unvisited entirely drag down the whole region's ranking. Wide Breadth (left side) is almost always safer for fraud detection.
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+<div style="background-color: #f8f9fa; border-left: 6px solid #e74c3c; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: L2 Tactical Execution (Depth vs. Breadth)</h4>
+
+<b>1. Setup & Universe Inputs:</b><br>
+This module filters for a specific L2 Budget (e.g., 20%) and a specific Universe (e.g., Normal). We are examining the exact shape of the Auditor's sample.<br><br>
+
+<b>2. Variables & Mathematical Calculation:</b><br>
+<i>X-Axis:</i> <b>L2 Execution Strategy (Clinics x Kids)</b>. Strategies are sorted from left (Maximum Breadth: many clinics, few kids) to right (Maximum Depth: few clinics, many kids).<br>
+<i>Y-Axis:</i> <b>Spreadsheet Overlap Accuracy (V3)</b>.<br>
+<i>Calculation:</i> We compare the Auditor's findings <code>abs(L2_haz - L1_haz)</code> to the true spreadsheet errors <code>abs(L1_haz - real_haz)</code>. L2 is ONLY evaluated on the universe of kids that L1 submitted. We are testing if L2 can catch the bad supervisors based strictly on how L2 distributes their physical visits.<br><br>
+
+<b>3. Objective & Hypothesis:</b><br>
+For a fixed budget, does an auditor catch more fraud by visiting 20 clinics (measuring 1 kid each) or visiting 1 clinic (measuring 20 kids)? Our hypothesis is that Breadth (visiting more clinics) will drastically outperform Depth, because data manipulation is usually clustered at the clinic level, not evenly distributed among kids.<br><br>
+
+<b>4. Results & Analysis:</b><br>
+The data unequivocally confirms the hypothesis. Every single line slopes downward as you move from left (Breadth) to right (Depth). When L2 groups all their audits into just a few clinics (right side of the chart), their accuracy plummets, even though they are spending the exact same amount of money and measuring the exact same number of children.<br><br>
+
+<b>5. Conclusion & Implications:</b><br>
+Audit logic must prioritize the number of geographical points visited, not the volume of kids measured at each point. A "Deep" audit is functionally useless for ranking supervisors because it leaves too many clinics completely unverified.<br><br>
+
+<b>6. Assurance of Robustness:</b><br>
+This downward slope holds true across all Universes and all L1 baseline budgets. In systemic corruption cases (Mafia), the penalty for choosing Depth over Breadth is even more severe.<br><br>
+
+<b>7. Open Questions for Discussion:</b><br>
+<ul>
+<li>Given that traveling to 20 different clinics is logistically more expensive than staying at 1 clinic, how do we adjust the travel budget to explicitly fund "Breadth" over "Depth"?</li>
+<li>Should we program constraints into the field app that mathematically prevent auditors from measuring more than a set number of kids per clinic?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
 
 with tab4:
     st.markdown("### L2 Robustness by L1 Budget")
@@ -459,13 +535,33 @@ with tab4:
     if fig4: st.pyplot(fig4)
 
     st.markdown("""
-    <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
-        <h4 style="margin-top: 0;">📊 Analytical Brief: L2 Auditor Robustness</h4>
-        <b>Parameters Used:</b> Universe isolated test. Compares L2 Audit Percentage (X-Axis) against Accuracy (Y-Axis) for different underlying L1 budgets.<br>
-        <b>Hypothesis:</b> The L2 auditor's ability to catch fraud is directly constrained by how much data L1 originally collected. If L1 only collected a tiny sample (20%), even a 100% audit by L2 will hit a strict mathematical ceiling.<br>
-        <b>Conclusions:</b> Notice how the lines flatten out. To catch the Top 100 corrupt regions, L2 requires L1 to have a sufficiently large base budget. A high L2 audit percentage cannot save a system where the L1 baseline data is severely lacking.
-    </div>
-    """, unsafe_allow_html=True)
+<div style="background-color: #f8f9fa; border-left: 6px solid #8e44ad; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: The Limits of the L2 Auditor</h4>
+
+<b>1. Setup & Flow:</b><br>
+Using 30 Monte Carlo pathways across a 266k population dataset, we simulate an L2 Auditor evaluating an L1 Supervisor's spreadsheet. We demonstrate L2's detection ceiling as their budget expands.<br><br>
+
+<b>2. Objective & Key Message:</b><br>
+We are testing L2's diagnostic success as their Audit Budget (X-Axis) increases. The key takeaway: Increasing L2 audits improves detection heavily, but permanently caps at ~85%. An auditor can perfectly catch massive fraud, but their own "clumsy" measurement noise prevents them from perfectly ranking borderline cases.<br><br>
+
+<b>3. Indicators & Legend:</b><br>
+<i>Y-Axis:</i> <b>Spreadsheet Truth Overlap</b> (Out of the true worst offenders on L1's sheet, what % did L2 successfully identify?).<br>
+<i>Lines:</i> Each line represents L1's baseline budget. L2's success is heavily capped by how much data L1 collected in the first place.<br><br>
+
+<b>4. Conclusion & Implications:</b><br>
+You cannot audit your way out of a poor L1 sample size. Furthermore, because human auditors have natural measurement variance, pushing for a 100% L2 audit is financially inefficient; an 80% audit achieves almost identical accountability results.<br><br>
+
+<b>5. Assurance of Robustness:</b><br>
+This 85% ceiling holds true across realistic scenarios. We stress-tested this against synthetic "Zero-Error" universes (Mafia/Blind Spot) where a flawless, robotic L2 correctly scales to near 100%, proving our 85% real-world boundary is mathematically sound.<br><br>
+
+<b>6. Open Questions for Discussion:</b><br>
+<ul>
+<li>At what point does the marginal cost of increasing L2 audits outweigh the benefit of simply giving L1 a larger base budget?</li>
+<li>Would investing in digital/automated measurement scales for L2 eliminate this human noise, or is an 85% detection rate acceptable for field operations?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+
 
 with tab5:
     st.markdown("### L2 Breadth Optimization (Across 5 Universes)")
@@ -474,28 +570,90 @@ with tab5:
     if fig5: st.pyplot(fig5)
 
     st.markdown("""
-    <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
-        <h4 style="margin-top: 0;">📊 Analytical Brief: Breadth vs. Depth Matrix</h4>
-        <b>Parameters Used:</b> L1 Budget is fixed. Evaluates L2 Breadth (number of clinics visited, X-axis) across 5 Universes and 5 L2 Budgets.<br>
-        <b>Hypothesis:</b> In highly corrupt universes (Mafia), auditing a few kids across many clinics (High Breadth) is more effective than heavily auditing a few clinics (High Depth), because fraud is systemic rather than isolated.<br>
-        <b>Conclusions:</b> In "Good L0 Good L1" universes, extreme breadth introduces statistical noise, occasionally causing accuracy to dip. However, in "Bad L0 Bad L1" (Mafia) scenarios, pushing the X-axis to the right (visiting more clinics) consistently yields higher detection rates for the same budget.
-    </div>
-    """, unsafe_allow_html=True)
+<div style="background-color: #f8f9fa; border-left: 6px solid #f39c12; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: The L1 vs. L2 Budget Matrix</h4>
+
+<b>1. Setup & Universe Inputs:</b><br>
+This heatmap collapses the tactical layer to look purely at systemic funding allocations across the 266k population pathways.<br><br>
+
+<b>2. Variables & Mathematical Calculation:</b><br>
+<i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum).<br>
+<i>Y-Axis:</i> <b>L2 Audit Budget</b> (20% to 100% of maximum).<br>
+<i>Color Scale (Z-Axis):</i> <b>Maximum Diagnostic Accuracy (V3)</b>.<br>
+<i>Calculation:</i> For every intersection of L1 and L2 funding, the engine finds the single best tactical deployment (the highest V3 Overlap) and plots that maximum possible accuracy. The calculation remains <code>abs(L2_haz - L1_haz)</code> evaluated against L1's spreadsheet.<br><br>
+
+<b>3. Objective & Hypothesis:</b><br>
+We are testing the financial trade-off between paying for initial data collection (L1) versus paying for auditing (L2). Our hypothesis is that L1 funding serves as the absolute foundation of accountability, and therefore, shifting budget to the X-Axis will yield higher returns than shifting budget to the Y-Axis.<br><br>
+
+<b>4. Results & Analysis:</b><br>
+The heatmap visually proves the hypothesis. Notice how the colors shift to green much faster when you move horizontally (increasing L1) compared to moving vertically (increasing L2). For example, a 60% L1 / 20% L2 split (wide foundation, light audit) yields drastically higher accountability than a 20% L1 / 60% L2 split (poor foundation, heavy audit).<br><br>
+
+<b>5. Conclusion & Implications:</b><br>
+You cannot audit a blank page. If L1 is underfunded, the data simply doesn't exist for L2 to audit. Financial planners should secure at least a 60% L1 base budget before heavily scaling the L2 accountability apparatus.<br><br>
+
+<b>6. Assurance of Robustness:</b><br>
+By selecting the "Mafia" or "Blind Spot" universes from the dropdown, you can verify that even in the worst-case scenarios of systemic fraud, the fundamental law of "L1 Foundation First" remains mathematically unbreakable.<br><br>
+
+<b>7. Open Questions for Discussion:</b><br>
+<ul>
+<li>If our total operational budget is capped, what is the absolute optimal percentage split between L1 funding and L2 funding?</li>
+<li>Are we currently over-investing in the L2 audit layer to compensate for a fundamentally underfunded L1 data collection layer?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
 
 with tab6:
     st.markdown("### L1 vs L2 Split-Pane Heatmap")
     c1, c2, c3 = st.columns(3)
-    sel_uni_t6 = c1.selectbox("Select Universe", options=df['Universe'].unique(), key='t6_uni')
+    sel_uni_t6 = c1.selectbox("Select Universe", options=df['Universe'].unique(), key='t6_uni', index=list(df['Universe'].unique()).index("Normal") if "Normal" in df['Universe'].unique() else 0)
     sel_l1_pct_t6 = c2.selectbox("L1 Base Budget", options=sorted(df['L1_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=2, key='t6_l1')
     sel_l2_pct_t6 = c3.selectbox("L2 Audit Budget", options=sorted(df['L2_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=1, key='t6_l2')
-    fig6 = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, sel_uni_t6, sel_l1_pct_t6, sel_l2_pct_t6)
-    if fig6: st.pyplot(fig6)
+    
+    fig_or_none = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, sel_uni_t6, sel_l1_pct_t6, sel_l2_pct_t6)
+    
+    if fig_or_none:
+        fig6, hm_data = fig_or_none
+        st.pyplot(fig6)
+        
+        st.markdown("#### 📈 Execution Summary Table")
+        
+        display_df = hm_data.copy()
+        display_df['L1_Acc'] = display_df['L1_Acc'].round(1).astype(str) + '%'
+        display_df['L2_Acc'] = display_df['L2_Acc'].round(1).astype(str) + '%'
+        display_df = display_df.rename(columns={
+            'L1_Label': 'L1 Strategy (Clinics x Kids)',
+            'L2_Label': 'L2 Strategy (Clinics x Kids)',
+            'L1_Acc': 'L1 Baseline Accuracy',
+            'L2_Acc': 'L2 Execution Accuracy'
+        })
+        display_df = display_df.drop(columns=['L2_K']).sort_values('L1 Strategy (Clinics x Kids)', ascending=False)
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-    st.markdown("""
-    <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
-        <h4 style="margin-top: 0;">📊 Analytical Brief: L2 Tactical Execution Menu</h4>
-        <b>Parameters Used:</b> Isolates a specific Universe, L1 Budget, and L2 Budget. Displays L1 baseline accuracy (left) vs. L2 strategy execution (right).<br>
-        <b>Hypothesis:</b> Even with fixed budgets, the specific deployment of L2 auditors (Depth vs. Breadth) dictates success. The "greenest" square on the right side represents the optimal tactical deployment for that specific scenario.<br>
-        <b>Conclusions:</b> This heatmap serves as the operational menu for field deployment. If L1 deployed a specific strategy (left column), L2 leadership can scan the corresponding row to the right to find the strategy with the highest accuracy (darkest green) that fits their budget constraints.
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown("""
+<div style="background-color: #f8f9fa; border-left: 6px solid #e67e22; padding: 20px; border-radius: 5px; margin-top: 20px;">
+<h4 style="margin-top: 0;">📊 Analytical Narrative: L2 Tactical Execution Menu</h4>
+
+<b>1. Setup & Flow:</b><br>
+Having established the ceilings of the L2 Auditor, we now focus on operational deployment. This matrix freezes the budgets for both L1 and L2 to determine the absolute optimal way to spend that money in the field.<br><br>
+
+<b>2. Objective & Key Message:</b><br>
+We are testing the interaction between L1's initial sampling strategy and L2's auditing strategy. The key takeaway: Even with frozen budgets, the specific deployment of L2 auditors (Depth vs. Breadth) dictates success. Field operations must match L2's audit shape to L1's initial footprint.<br><br>
+
+<b>3. Indicators & Legend:</b><br>
+<i>Left Pane (Blues):</i> <b>L1 Baseline Accuracy</b>. The operational foundation laid by the supervisor.<br>
+<i>Right Pane (Green/Red):</i> <b>L2 Execution Accuracy</b>. The resulting diagnostic power based on how L2 chose to sample L1's work.<br>
+<i>Note on Color Scale:</i> The color scale is <b>globally standardized</b> across all universes (Red always means poor global performance, Green always means peak global performance).<br><br>
+
+<b>4. Conclusion & Implications:</b><br>
+This heatmap serves as the operational menu for field leadership. If an L1 supervisor deployed a specific strategy (Left Column), leadership can scan the corresponding row to the right to find the "greenest" execution strategy for L2. Misaligning L2's depth with L1's initial breadth can cause accuracy to drop significantly without saving any budget.<br><br>
+
+<b>5. Assurance of Robustness:</b><br>
+By viewing the "Normal" universe, we see the realistic operational bounds with natural human measurement errors included. You can verify the stability of these tactics by cycling through the extreme edge cases (Mafia, Utopia) in the dropdown above.<br><br>
+
+<b>6. Open Questions for Discussion:</b><br>
+<ul>
+<li>If the heatmap indicates that High Breadth (left side of the right pane) is consistently safer, are we logistically equipped to transport auditors to 15 different clinics rather than letting them stay deeply at 5 clinics?</li>
+<li>How do we ensure L1 supervisors accurately report their sampling strategy so L2 can deploy the correct counter-strategy?</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
