@@ -411,10 +411,9 @@ with tab1:
     # Analytical Brief for Tab 1
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #2980b9; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Global Diagnostic Power</h4>
 
 <b>1. Setup & Universe Input Parameters:</b><br>
-This module evaluates a simulated global population of 266,000 children. To isolate the effects of operational behavior, we tested four absolute "Zero-Error" environments alongside one "Normal" environment featuring realistic human measurement variance.
+This module evaluates a simulated global population of 266,000 children. We have simulated each universe to have 334 L1, 25 L0 under each L1, 15 children under each L0. To isolate the effects of operational behavior, we tested four absolute "Zero-Error" environments alongside one "Normal" environment featuring realistic human measurement variance.
 <br><br>
 
 <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; margin-bottom: 15px;">
@@ -490,25 +489,21 @@ This module evaluates a simulated global population of 266,000 children. To isol
 
 <b>2. Variables & Mathematical Calculation:</b><br>
 <i>X-Axis:</i> <b>L1 Base Budget</b>. The percentage of the target population L1 is funded to measure (Max = 375 children across 25 clinics).<br>
-<i>Y-Axis:</i> <b>Global Overlap Accuracy (V1)</b>. <br>
-<i>Calculation:</i> We calculate Measured Rank and Real Rank. The Measured Rank is obtained by calculating <code>abs(L1 HAZ Score - L0 HAZ Score)</code> (of children sampled by L1 only) and then ranking the L1 Regions from worst to best (Descending Order) to identify the actual lowest-performing L1 supervisors. The Real Rank is obtained by calculating <code>abs(L1 HAZ Score - Real HAZ Score)</code> (of all children) for each region and ranking them in descending order. The Y-Axis represents the percentage of the overlap between the Measured & Real Ranking L1 Regions.<br><br>
+<i>Y-Axis:</i> <b>Percentage Overlap between the ranking from the comparison of |L1-L0| and |L0-Real|</b>. <br>
+<i>Calculation:</i> We calculate Measured Rank and Real Rank. The Measured Rank is obtained by calculating <code>abs(L1 HAZ Score - L0 HAZ Score)</code> (of children sampled by L1 only) and then ranking the L1 Regions from worst to best (Descending Order) to identify the actual lowest-performing L1 Regions. The Real Rank is obtained by calculating <code>abs(L1 HAZ Score - Real HAZ Score)</code> (of all children) for each region and ranking them in descending order. The Y-Axis represents the percentage of the overlap between the Measured & Real Ranking L1 Regions.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-This plot tests the capability of the L1 supervisor to diagnose systemic failure when observing only a localized fraction of the total region. The hypothesis is that Global Accuracy will scale linearly with sample size.<br><br>
+This plot tests the capability of the L1 supervisor to diagnose systemic failure when observing only a localized sample of the total region. 
+                The hypothesis is that Ranking Accuracy will scale linearly with sample size.<br><br>
 
 <b>4. Results & Analysis:</b><br>
-The results confirm the structural hypothesis but indicate a performance asymptote. As the base budget increases, the detection rate rises before ultimately flattening out. In the <b>Normal</b> environment, natural measurement variance ($\pm$ 1.0cm) prevents perfect ranking of borderline cases, creating a strict upper bound. Conversely, in highly manipulated environments, the delta between accurate data and fabricated data is statistically significant enough that a 60% sample budget captures the majority of critical failures.<br><br>
+The results confirm the structural hypothesis but indicate a performance asymptote. 
+                As the base budget increases, the detection rate rises before ultimately flattening out. In the <b>Normal</b> environment, natural measurement variance ($\pm$ 1.0cm) prevents perfect ranking of borderline cases, creating a strict upper bound. Conversely, in highly manipulated environments, the delta between accurate data and fabricated data is statistically significant enough that a 60% sample budget captures the majority of critical failures.<br><br>
 
 <b>5. Conclusion & Implications:</b><br>
 To accurately diagnose the global state of a region, the L1 operational budget must meet a minimum threshold of ~60%. Below this threshold, unobserved geographical blind spots severely degrade diagnostic power. This loss of primary intelligence cannot be mathematically recovered by subsequent L2 auditing.<br><br>
 
-<b>6. Assurance of Robustness:</b><br>
-By plotting zero-error environments against the normal environment, the simulation isolates physical sampling limitations from human measurement error. The structural bounds remain consistent across all permutations.<br><br>
 
-<b>7. Open Questions for Discussion:</b><br>
-<ul>
-<li>What is the acceptable programmatic threshold for Global Accuracy? If an 80% accuracy rate requires double the operational funding of a 60% accuracy rate, is the marginal gain in intelligence cost-effective?</li>
-<li>What primary indicators can be utilized to pre-determine which operational universe a physical district currently occupies?</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -525,26 +520,24 @@ with tab2:
     # Analytical Brief for Tab 2
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #27ae60; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: L1 Intra-Regional (Targeted) Accuracy</h4>
 
 <b>1. Setup & Universe Inputs:</b><br>
-Using the same 266k population and 5 baseline Universes, this visual shifts the perspective from L1 Regions to Local L0 AWC centers.<br><br>
+This is an extension of plot 1. We rank the L0 measured by L1 unders its L1 Region. Each L1 will have a ranking of worst performing L0 via |L1-L0|. We compare that with the real rank of 25 L0 under that L1 via |L0-Real| score. We take the average of all L1 rankings.This visual shifts the perspective from L1 Regions to Local L0 AWC centers.<br><br>
 
 <b>2. Variables & Mathematical Calculation:</b><br>
 <i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum capacity).<br>
-<i>Y-Axis:</i> <b>Intra-Regional Overlap Accuracy (V2)</b>.<br>
-<i>Calculation:</i> We compare the clinic's register to L1's measurement: <code>abs(L1_haz - L0_haz)</code>. Crucially, <b>L1 is ONLY evaluated on the specific clinics they actually visited.</b> We ask: "Within the specific clinics L1 sampled, did they successfully catch the top 30% worst clinics?"<br><br>
+<i>Y-Axis:</i> <b>Average Intra-Regional Overlap in Ranking</b>.<br>
+<i>Calculation:</i> We compare the L0 to L1's measurement: <code>abs(L1_haz - L0_haz)</code>.</b> We ask: "Within the specific sample measured by L1, did they successfully catch the top 30% worst clinics?"<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-We are testing L1's localized competence. Our hypothesis is that because L1 is not focuing on visiting all L0 centers, the accuracy will be significantly higher and much less dependent on budget scaling than Plot 1.<br><br>
+We are testing L1's localized competence. Our hypothesis is that L0 fraud is a systemic issue and as L1 is visiting all L0 with increasing budget/samples in each round. We will see a large amount of worst L0 caught at smaller budgets and the effect would be consistent across increasing budgets, and at very high budgets, we will have maximum number of L0 caught.<br>
 
 <b>4. Results & Analysis:</b><br>
 The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Because the denominator shrinks to match L1's sample size, an L1 supervisor with a 20% budget appears highly accurate within their tiny footprint. The mathematical logic holds: if you only check 5 clinics, it is relatively easy to rank those 5 clinics accurately.<br><br>
 
 <b>5. Conclusion & Implications:</b><br>
 This reveals a massive administrative danger: <b>The False Sense of Security</b>. If leadership only evaluates supervisors based on what they submit (Intra-Regional), supervisors will look highly competent, even if they are entirely blind to 80% of their actual district. Evaluating L1 requires global benchmarks, not just local ones.<br><br>
-
-<b>6. Assurance of Robustness:</b><br>
+<br>
 This dynamic is proven across the sensitivity datasets. Even in "Blind Spot" (where L1 is lazy), their Intra-Regional score behaves differently than their Global score, mathematically proving the risk of localized evaluation metrics.<br><br>
 
 <b>7. Open Questions for Discussion:</b><br>
@@ -571,30 +564,28 @@ with tab3:
 
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #e74c3c; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: L2 Tactical Execution (Depth vs. Breadth)</h4>
 
 <b>1. Setup & Universe Inputs:</b><br>
-This module filters for a specific L2 Budget (e.g., 20%) and a specific Universe (e.g., Normal). We are examining the exact shape of the Auditor's sample.<br><br>
+This module filters for a specific L1 Budget (e.g., 20%) and a specific Universe (e.g., Normal). We are examining the exact shape of L1 catching the worst L1 Region.<br><br>
 
 <b>2. Variables & Mathematical Calculation:</b><br>
-<i>X-Axis:</i> <b>L2 Execution Strategy (Clinics x Kids)</b>. Strategies are sorted from left (Maximum Breadth: many clinics, few kids) to right (Maximum Depth: few clinics, many kids).<br>
-<i>Y-Axis:</i> <b>Spreadsheet Overlap Accuracy (V3)</b>.<br>
-<i>Calculation:</i> We compare the Auditor's findings <code>abs(L2_haz - L1_haz)</code> to the true spreadsheet errors <code>abs(L1_haz - real_haz)</code>. L2 is ONLY evaluated on the universe of kids that L1 submitted. We are testing if L2 can catch the bad supervisors based strictly on how L2 distributes their physical visits.<br><br>
+<i>X-Axis:</i> <b>L1 Sampling Strategy (Clinics x Kids)</b>. Strategies are sorted from left (Maximum Breadth: many clinics, few kids) to right (Maximum Depth: few clinics, many kids).<br>
+<i>Y-Axis:</i> <b>Top 100 Worst L1 Regions Caught</b>.<br>
+<i>Calculation:</i> We compare the L1 findings <code>abs(L1_haz - L0_haz)</code> to the real L1 Region error <code>abs(L0_haz - real_haz)</code>. L1 is ONLY evaluated on the universe of kids that L1 has sampled. We are testing if L1 can catch the bad L1 Region based strictly on how L1 distributes their physical visits.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-For a fixed budget, does an auditor catch more fraud by visiting 20 clinics (measuring 1 kid each) or visiting 1 clinic (measuring 20 kids)? Our hypothesis is that Breadth (visiting more clinics) will drastically outperform Depth, because data manipulation is usually clustered at the clinic level, not evenly distributed among kids.<br><br>
+For a fixed budget, does an L1 Supervisor catch more fraud by visiting 20 clinics (measuring 1 kid each) or visiting 1 clinic (measuring 20 kids)? Our hypothesis is that Breadth (visiting more clinics) will drastically outperform Depth, because data manipulation is usually clustered at the clinic level, not evenly distributed among kids.<br><br>
 
 <b>4. Results & Analysis:</b><br>
 The delta is not significant enough to confirm our hypothesis that sampling more L0 yields a better result. We can confirm that increasing the budget of L1 improves the ranking accuracy. Across different sensitivities, we can confirm that measurement error in "Normal" universe adds a lot of noise during measurements, which disrupts the ranking accuracy.<br><br>
 
 <b>5. Conclusion & Implications:</b><br>
-Based on the current results, we are not able to conclude anything with significane. we see a slight increase in accuracy of rankings when more L0 are sampled.<br><br>
+Based on the current results, we are not able to conclude anything with significance. we see a slight increase in accuracy of rankings when more L0 are sampled.<br><br>
 
 
 <b>6. Open Questions for Discussion:</b><br>
 <ul>
 <li>Given that traveling to 20 different clinics is logistically more expensive than staying at 1 clinic, how do we adjust the travel budget to explicitly fund "Breadth" over "Depth"?</li>
-<li>Should we program constraints into the field app that mathematically prevent auditors from measuring more than a set number of kids per clinic?</li>
 <li>Should we use other metric (other than MAE) to calculate the rankings?</li>
 </ul>
 </div>
@@ -608,13 +599,12 @@ with tab4:
 
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #8e44ad; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: The Limits of the L2 Auditor</h4>
 
 <b>1. Setup & Flow:</b><br>
 We simulate an L2 Auditor evaluating an L1 Supervisor's Measurement. We demonstrate L2's detection ceiling as their budget expands.<br><br>
 
-<b>2. Objective & Key Message:</b><br>
-We are testing L2's diagnostic success as their Audit Budget (X-Axis) increases. The key takeaway: Increasing L2 audits improves detection heavily, but permanently caps at ~85%. An auditor can perfectly catch massive fraud, but their own "clumsy" measurement noise prevents them from perfectly ranking borderline cases.<br><br>
+<b>2. Objective & Hypothesis:</b><br>
+We are testing L2's diagnostic success as their Audit Budget (X-Axis) increases. We calculate the Measured Rank of L1 using |L2-L1| scores and compare it with the Real Rank of L1 using |L1-Real| scores and compare the overlap. The key hypothesis: Increasing L2 audits sample/budget slightly will result in massive identification of worst L1 and the effect will taper off and reach an equilibrium at higher budgets. Measurement error prevents them from perfectly ranking borderline cases.<br><br>
 
 <b>3. Indicators & Legend:</b><br>
 <i>Y-Axis:</i> <b>Spreadsheet Truth Overlap</b> (Out of the true worst offenders on L1's sheet, what % did L2 successfully identify?).<br>
@@ -643,7 +633,6 @@ with tab5:
 
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #f39c12; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: The L1 vs. L2 Budget Matrix</h4>
 
 <b>1. Setup & Universe Inputs:</b><br>
 This heatmap collapses the tactical layer to look purely at systemic funding allocations across the 266k population pathways.<br><br>
@@ -703,7 +692,6 @@ with tab6:
 
         st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #e67e22; padding: 20px; border-radius: 5px; margin-top: 20px;">
-<h4 style="margin-top: 0;">📊 Analytical Narrative: L2 Tactical Execution Menu</h4>
 
 <b>1. Setup & Flow:</b><br>
 Having established the ceilings of the L2 Auditor, we now focus on operational deployment. This matrix freezes the budgets for both L1 and L2 to determine the absolute optimal way to spend that money in the field.<br><br>
