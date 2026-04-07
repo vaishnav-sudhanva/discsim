@@ -698,28 +698,25 @@ with tab6:
                 st.pyplot(fig6)
         
         with exp_col2:
-            # HTML/CSS Color Legend
             st.markdown("""
 <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; height: 100%; margin-top: 10px;">
-    <h4 style="margin-top: 0; color: #2c3e50;">Color Legends</h4>
-    
-    <hr style="margin: 10px 0;">
-    <b>🟦 L1 Baseline (Left Pane)</b><br>
-    <span style="font-size: 12px; color: #7f8c8d;">L1's Initial Diagnostic Power</span>
-    <div style="background: linear-gradient(to right, #f7fbff, #4292c6, #08306b); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
-    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px; font-weight: bold;">
-        <span>0% (Poor)</span>
-        <span>100% (Perfect)</span>
-    </div>
-
-    <b>🚥 L2 Execution (Right Pane)</b><br>
-    <span style="font-size: 12px; color: #7f8c8d;">L2's Final Audit Accuracy</span>
-    <div style="background: linear-gradient(to right, #d73027, #ffffbf, #1a9850); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
-    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
-        <span>0%</span>
-        <span>50%</span>
-        <span>100%</span>
-    </div>
+<h4 style="margin-top: 0; color: #2c3e50;">Color Legends</h4>
+<hr style="margin: 10px 0;">
+<b>🟦 L1 Baseline (Left Pane)</b><br>
+<span style="font-size: 12px; color: #7f8c8d;">L1's Initial Diagnostic Power</span>
+<div style="background: linear-gradient(to right, #f7fbff, #4292c6, #08306b); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+<div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px; font-weight: bold;">
+<span>0% (Poor)</span>
+<span>100% (Perfect)</span>
+</div>
+<b>🚥 L2 Execution (Right Pane)</b><br>
+<span style="font-size: 12px; color: #7f8c8d;">L2's Final Audit Accuracy</span>
+<div style="background: linear-gradient(to right, #d73027, #ffffbf, #1a9850); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
+<span>0%</span>
+<span>50%</span>
+<span>100%</span>
+</div>
 </div>
 """, unsafe_allow_html=True)
             
