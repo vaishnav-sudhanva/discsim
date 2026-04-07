@@ -663,34 +663,124 @@ By selecting the "Mafia" or "Blind Spot" universes from the dropdown, you can ve
 </div>
 """, unsafe_allow_html=True)
 
-with tab6:
-    st.markdown("### L1 vs L2 Split-Pane Heatmap")
-    c1, c2, c3 = st.columns(3)
-    sel_uni_t6 = c1.selectbox("Select Universe", options=df['Universe'].unique(), key='t6_uni', index=list(df['Universe'].unique()).index("Normal") if "Normal" in df['Universe'].unique() else 0)
-    sel_l1_pct_t6 = c2.selectbox("L1 Base Budget", options=sorted(df['L1_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=2, key='t6_l1')
-    sel_l2_pct_t6 = c3.selectbox("L2 Audit Budget", options=sorted(df['L2_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=1, key='t6_l2')
-    
-    fig_or_none = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, sel_uni_t6, sel_l1_pct_t6, sel_l2_pct_t6)
-    
-    if fig_or_none:
-        fig6, hm_data = fig_or_none
-        st.pyplot(fig6)
-        
-        st.markdown("#### 📈 Execution Summary Table")
-        
-        display_df = hm_data.copy()
-        display_df['L1_Acc'] = display_df['L1_Acc'].round(1).astype(str) + '%'
-        display_df['L2_Acc'] = display_df['L2_Acc'].round(1).astype(str) + '%'
-        display_df = display_df.rename(columns={
-            'L1_Label': 'L1 Strategy (Clinics x Kids)',
-            'L2_Label': 'L2 Strategy (Clinics x Kids)',
-            'L1_Acc': 'L1 Baseline Accuracy',
-            'L2_Acc': 'L2 Execution Accuracy'
-        })
-        display_df = display_df.drop(columns=['L2_K']).sort_values('L1 Strategy (Clinics x Kids)', ascending=False)
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-        st.markdown("""
+with tab6:
+    st.markdown("### L1 vs L2 Split-Pane Heatmap Matrix")
+
+    # 1. Initialize Session State for the "Click to Expand" feature
+    if 'expanded_uni' not in st.session_state:
+        st.session_state.expanded_uni = None
+
+    # 2. Universal Budget Controls (Always visible at the top)
+    c1, c2 = st.columns(2)
+    sel_l1_pct_t6 = c1.selectbox("L1 Base Budget", options=sorted(df['L1_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=2, key='t6_l1')
+    sel_l2_pct_t6 = c2.selectbox("L2 Audit Budget", options=sorted(df['L2_Budget_Pct'].unique(), key=lambda x: int(x.replace('%',''))), index=1, key='t6_l2')
+    st.markdown("---")
+
+    # =====================================================================
+    # EXPANDED VIEW (Triggered when a user clicks a specific universe)
+    # =====================================================================
+    if st.session_state.expanded_uni:
+        # Back Button
+        if st.button("⬅️ Back to 3x2 Grid View"):
+            st.session_state.expanded_uni = None
+            st.rerun()
+            
+        st.markdown(f"#### 🔍 Expanded View: {st.session_state.expanded_uni}")
+        
+        # Split layout: 3 parts for the plot, 1 part for the Color Legends on the right
+        exp_col1, exp_col2 = st.columns([3, 1])
+        
+        with exp_col1:
+            fig_or_none = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, st.session_state.expanded_uni, sel_l1_pct_t6, sel_l2_pct_t6)
+            if fig_or_none:
+                fig6, hm_data = fig_or_none
+                st.pyplot(fig6)
+        
+        with exp_col2:
+            # HTML/CSS Color Legend
+            st.markdown("""
+            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; height: 100%; margin-top: 10px;">
+                <h4 style="margin-top: 0; color: #2c3e50;">Color Legends</h4>
+                
+                <hr style="margin: 10px 0;">
+                <b>🟦 L1 Baseline (Left Pane)</b><br>
+                <span style="font-size: 12px; color: #7f8c8d;">L1's Initial Diagnostic Power</span>
+                <div style="background: linear-gradient(to right, #f7fbff, #4292c6, #08306b); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px; font-weight: bold;">
+                    <span>0% (Poor)</span>
+                    <span>100% (Perfect)</span>
+                </div>
+
+                <b>🚥 L2 Execution (Right Pane)</b><br>
+                <span style="font-size: 12px; color: #7f8c8d;">L2's Final Audit Accuracy</span>
+                <div style="background: linear-gradient(to right, #d73027, #ffffbf, #1a9850); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        # Summary Table under the expanded view
+        if fig_or_none:
+            st.markdown("#### 📈 Execution Summary Table")
+            display_df = hm_data.copy()
+            display_df['L1_Acc'] = display_df['L1_Acc'].round(1).astype(str) + '%'
+            display_df['L2_Acc'] = display_df['L2_Acc'].round(1).astype(str) + '%'
+            display_df = display_df.rename(columns={
+                'L1_Label': 'L1 Strategy (Clinics x Kids)',
+                'L2_Label': 'L2 Strategy (Clinics x Kids)',
+                'L1_Acc': 'L1 Baseline Accuracy',
+                'L2_Acc': 'L2 Execution Accuracy'
+            })
+            display_df = display_df.drop(columns=['L2_K']).sort_values('L1 Strategy (Clinics x Kids)', ascending=False)
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            
+    # =====================================================================
+    # GRID VIEW (Default State: Shows all universes in 3x2 grid)
+    # =====================================================================
+    else:
+        st.markdown("#### 🌍 Universe Grid (Click 'Expand' to analyze specific dynamics)")
+        universes = list(df['Universe'].unique())
+        
+        # Row 1 (First 3 Universes)
+        cols_r1 = st.columns(3)
+        for i in range(3):
+            if i < len(universes):
+                uni = universes[i]
+                with cols_r1[i]:
+                    st.markdown(f"**{uni}**")
+                    fig_small = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, uni, sel_l1_pct_t6, sel_l2_pct_t6)
+                    if fig_small:
+                        st.pyplot(fig_small[0])
+                    # Expand Button
+                    if st.button(f"🔍 Expand {uni}", key=f"btn_{uni}"):
+                        st.session_state.expanded_uni = uni
+                        st.rerun()
+
+        st.markdown("---")
+        
+        # Row 2 (Remaining Universes)
+        cols_r2 = st.columns(3)
+        for i in range(3, 6):
+            if i < len(universes):
+                uni = universes[i]
+                with cols_r2[i-3]:
+                    st.markdown(f"**{uni}**")
+                    fig_small = plot_6_heatmap(df, v1_col, v3_col, selected_metric_label, uni, sel_l1_pct_t6, sel_l2_pct_t6)
+                    if fig_small:
+                        st.pyplot(fig_small[0])
+                    # Expand Button
+                    if st.button(f"🔍 Expand {uni}", key=f"btn_{uni}"):
+                        st.session_state.expanded_uni = uni
+                        st.rerun()
+
+    # =====================================================================
+    # ANALYTICAL BRIEF (Always visible at bottom)
+    # =====================================================================
+    st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #e67e22; padding: 20px; border-radius: 5px; margin-top: 20px;">
 
 <b>1. Setup & Flow:</b><br>
@@ -702,13 +792,13 @@ We are testing the interaction between L1's initial sampling strategy and L2's a
 <b>3. Indicators & Legend:</b><br>
 <i>Left Pane (Blues):</i> <b>L1 Baseline Accuracy</b>. The operational foundation laid by the supervisor.<br>
 <i>Right Pane (Green/Red):</i> <b>L2 Execution Accuracy</b>. The resulting diagnostic power based on how L2 chose to sample L1's work.<br>
-<i>Note on Color Scale:</i> The color scale is <b>globally standardized</b> across all universes (Red always means poor global performance, Green always means peak global performance).<br><br>
+<i>Note on Color Scale:</i> The color scale is <b>globally standardized</b> across all universes (Red always means poor global performance, Green always means peak global performance). See the legend in the expanded view for limits.<br><br>
 
 <b>4. Conclusion & Implications:</b><br>
 This heatmap serves as the operational menu for field leadership. If an L1 supervisor deployed a specific strategy (Left Column), leadership can scan the corresponding row to the right to find the "greenest" execution strategy for L2. Misaligning L2's depth with L1's initial breadth can cause accuracy to drop significantly without saving any budget.<br><br>
 
 <b>5. Assurance of Robustness:</b><br>
-By viewing the "Normal" universe, we see the realistic operational bounds with natural human measurement errors included. You can verify the stability of these tactics by cycling through the extreme edge cases (Mafia, Utopia) in the dropdown above.<br><br>
+By viewing the "Normal" universe, we see the realistic operational bounds with natural human measurement errors included. You can verify the stability of these tactics by cycling through the extreme edge cases (Mafia, Utopia) in the grid above.<br><br>
 
 <b>6. Open Questions for Discussion:</b><br>
 <ul>
