@@ -697,7 +697,7 @@ with tab6:
                 fig6, hm_data = fig_or_none
                 st.pyplot(fig6)
         
-       with exp_col2:
+        with exp_col2:
             # HTML/CSS Color Legend
             st.markdown("""
 <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; height: 100%; margin-top: 10px;">
