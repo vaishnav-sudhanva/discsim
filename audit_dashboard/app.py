@@ -697,31 +697,31 @@ with tab6:
                 fig6, hm_data = fig_or_none
                 st.pyplot(fig6)
         
-        with exp_col2:
+       with exp_col2:
             # HTML/CSS Color Legend
             st.markdown("""
-            <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; height: 100%; margin-top: 10px;">
-                <h4 style="margin-top: 0; color: #2c3e50;">Color Legends</h4>
-                
-                <hr style="margin: 10px 0;">
-                <b>🟦 L1 Baseline (Left Pane)</b><br>
-                <span style="font-size: 12px; color: #7f8c8d;">L1's Initial Diagnostic Power</span>
-                <div style="background: linear-gradient(to right, #f7fbff, #4292c6, #08306b); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
-                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px; font-weight: bold;">
-                    <span>0% (Poor)</span>
-                    <span>100% (Perfect)</span>
-                </div>
+<div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; height: 100%; margin-top: 10px;">
+    <h4 style="margin-top: 0; color: #2c3e50;">Color Legends</h4>
+    
+    <hr style="margin: 10px 0;">
+    <b>🟦 L1 Baseline (Left Pane)</b><br>
+    <span style="font-size: 12px; color: #7f8c8d;">L1's Initial Diagnostic Power</span>
+    <div style="background: linear-gradient(to right, #f7fbff, #4292c6, #08306b); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px; font-weight: bold;">
+        <span>0% (Poor)</span>
+        <span>100% (Perfect)</span>
+    </div>
 
-                <b>🚥 L2 Execution (Right Pane)</b><br>
-                <span style="font-size: 12px; color: #7f8c8d;">L2's Final Audit Accuracy</span>
-                <div style="background: linear-gradient(to right, #d73027, #ffffbf, #1a9850); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
-                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
-                    <span>0%</span>
-                    <span>50%</span>
-                    <span>100%</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    <b>🚥 L2 Execution (Right Pane)</b><br>
+    <span style="font-size: 12px; color: #7f8c8d;">L2's Final Audit Accuracy</span>
+    <div style="background: linear-gradient(to right, #d73027, #ffffbf, #1a9850); height: 20px; border-radius: 4px; margin-top: 5px; margin-bottom: 2px;"></div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
+        <span>0%</span>
+        <span>50%</span>
+        <span>100%</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
             
         # Summary Table under the expanded view
         if fig_or_none:
@@ -784,15 +784,15 @@ with tab6:
 <div style="background-color: #f8f9fa; border-left: 6px solid #e67e22; padding: 20px; border-radius: 5px; margin-top: 20px;">
 
 <b>1. Setup & Flow:</b><br>
-Having established the ceilings of the L2 Auditor, we now focus on operational deployment. This matrix freezes the budgets for both L1 and L2 to determine the absolute optimal way to spend that money in the field.<br><br>
+We visualise a Heatmap of the ranking of L1 by L2 across different sampling strategies. This matrix freezes the budgets for both L1 and L2 to determine the optimal Sampling Strategy to spend that budget.<br><br>
 
 <b>2. Objective & Key Message:</b><br>
-We are testing the interaction between L1's initial sampling strategy and L2's auditing strategy. The key takeaway: Even with frozen budgets, the specific deployment of L2 auditors (Depth vs. Breadth) dictates success. Field operations must match L2's audit shape to L1's initial footprint.<br><br>
+We are testing the interaction between L1's initial sampling strategy and L2's auditing strategy. The key takeaway: Even with frozen budgets, the deployment of L2 auditors (Depth vs. Breadth) increases the ranking accuracy in catching bad L1.<br>
 
 <b>3. Indicators & Legend:</b><br>
-<i>Left Pane (Blues):</i> <b>L1 Baseline Accuracy</b>. The operational foundation laid by the supervisor.<br>
-<i>Right Pane (Green/Red):</i> <b>L2 Execution Accuracy</b>. The resulting diagnostic power based on how L2 chose to sample L1's work.<br>
-<i>Note on Color Scale:</i> The color scale is <b>globally standardized</b> across all universes (Red always means poor global performance, Green always means peak global performance). See the legend in the expanded view for limits.<br><br>
+<i>Left Pane (Blues):</i> <b>L1 Baseline Accuracy</b>. L1 Ranking Accuracy in Ranking L1 Regions.<br>
+<i>Right Pane (Green/Red):</i> <b>L2 Execution Accuracy</b>. L2 Ranking Accuracy in Ranking Bad/Wrost L1.<br>
+<i>Note on Color Scale:</i> The color scale is <b>globally standardized</b> across all universes (Red always means low Ranking Accuracy, Green always peak Ranking Accuracy). See the legend in the expanded view for limits.<br><br>
 
 <b>4. Conclusion & Implications:</b><br>
 This heatmap serves as the operational menu for field leadership. If an L1 supervisor deployed a specific strategy (Left Column), leadership can scan the corresponding row to the right to find the "greenest" execution strategy for L2. Misaligning L2's depth with L1's initial breadth can cause accuracy to drop significantly without saving any budget.<br><br>
