@@ -14,7 +14,7 @@ import os
 # ==============================================================================
 st.set_page_config(page_title="Audit Optimization Dashboard", layout="wide")
 
-@st.cache_data
+#@st.cache_data
 def load_data():
     # 1. Find the exact folder where app.py lives
     current_dir = os.path.dirname(os.path.abspath(__file__))
