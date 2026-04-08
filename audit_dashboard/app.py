@@ -651,7 +651,7 @@ with tab4:
                     if st.button(f"🔍 Expand {uni}", key=f"btn_t4_{uni}"):
                         st.session_state.expanded_uni_t4 = uni
                         st.rerun()
-                        
+
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #8e44ad; padding: 20px; border-radius: 5px; margin-top: 20px;">
 
@@ -695,7 +695,7 @@ Having established the overall ceilings of the L2 Auditor, we check how Ranking 
 <b>2. Variables & Mathematical Calculation:</b><br>
 <i>X-Axis:</i> <b>L2 Breadth: No. of L0 Visited.</b> For the fixed L2's Budget, we fix the No. of L0 audited by L2. Say L2's Budget is 100, adn it is visiting 5 L0, we automatically fix 100/5= 20 Kids Sampled by L2 in each L0 visited.<br>
 <i>Y-Axis:</i> <b>L2 Identifying Worst L1</b>.<br>
-<i>Color Scale (Z-Axis):</i> <b>Colour varying wrt L2 Busget</b>.<br>
+<i>Color Scale (Z-Axis):</i> <b>Colour changing wrt L2 Budget</b>.<br>
 <i>Calculation:</i> For every intersection of L1 and L2 Budget, we let the L2 audit samples only from the subset of samples measured by L1. The calculation remains <code>abs(L2_haz - L1_haz)</code> evaluated against L1's real score |L1-Real|.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
@@ -703,21 +703,21 @@ Our objective is to evaluate a core hypothesis: <i>Does L2 efficiently identify 
 
 <b>4. Results & Analysis:</b><br>
 <ul>
-    <li style="margin-bottom: 10px;"><b>(Good L0 + Good L1):</b><br> 
-    <i>Hypothesis:</i> L2 does not have high scope because everyone is honest.<br>
-    <i>Data Result:</i> Verified. At a 20% budget, L2 hits <b>68%</b> accuracy. At a 100% budget, it actually drops to <b>65%</b>. Because there is zero true fraud, L2 provides no added value. They are just capturing the mathematical noise of natural biological growth (data drift) between measurements.</li>
+<li style="margin-bottom: 10px;"><b>(Good L0 + Good L1):</b><br> 
+<i>Hypothesis:</i> L2 does not have high scope because everyone is honest.<br>
+<i>Data Result:</i> Verified. At a 20% budget, L2 hits <b>68%</b> accuracy. At a 100% budget, it actually drops to <b>65%</b>. Because there is zero true fraud, L2 provides no added value. They are just capturing the mathematical noise of natural biological growth (data drift) between measurements.</li>
 
-    <li style="margin-bottom: 10px;"><b>(Good L0 + Bad L1):</b><br> 
-    <i>Hypothesis:</i> Even though L1 just copies accurate L0 data, L2 will catch L1 because of Data Drift (biological growth).<br>
-    <i>Data Result:</i> Verified. L2 scales from <b>68%</b> (at 20% budget) up to <b>83%</b> (at 100% budget). L1 copied Day 0 data. When L2 measures at Day 30, the 30-day biological growth acts as an inescapable "tracer dye." L2 easily spots that the children are biologically older than the supervisor reported.</li>
+<li style="margin-bottom: 10px;"><b>(Good L0 + Bad L1):</b><br> 
+<i>Hypothesis:</i> Even though L1 just copies accurate L0 data, L2 will catch L1 because of Data Drift (biological growth).<br>
+<i>Data Result:</i> Verified. L2 scales from <b>68%</b> (at 20% budget) up to <b>83%</b> (at 100% budget). L1 copied Day 0 data. When L2 measures at Day 30, the 30-day biological growth acts as an inescapable "tracer dye." L2 easily spots that the children are biologically older than the supervisor reported.</li>
 
-    <li style="margin-bottom: 10px;"><b>(Bad L0 + Good L1):</b><br>
-    <i>Hypothesis:</i> L2 has less power finding bad L1s, but L1 handles the L0 fraud.<br>
-    <i>Data Result:</i> Verified. The accuracy completely flatlines: <b>73%</b> (at 20% budget) and <b>68%</b> (at 100% budget). Because L1 is honest, the spreadsheet they submit to Headquarters is already highly accurate. When L2 arrives, the disease is already cured. L2 scaling provides zero diagnostic return on investment here.</li>
+<li style="margin-bottom: 10px;"><b>(Bad L0 + Good L1):</b><br>
+<i>Hypothesis:</i> L2 has less power finding bad L1s, but L1 handles the L0 fraud.<br>
+<i>Data Result:</i> Verified. The accuracy completely flatlines: <b>73%</b> (at 20% budget) and <b>68%</b> (at 100% budget). Because L1 is honest, the spreadsheet they submit to Headquarters is already highly accurate. When L2 arrives, the disease is already cured. L2 scaling provides zero diagnostic return on investment here.</li>
 
-    <li style="margin-bottom: 10px;"><b>(Bad L0 + Bad L1):</b><br> 
-    <i>Hypothesis:</i> Due to data drift and severe collusion, L2 finds a lot of bad L1s.<br>
-    <i>Data Result:</i> Verified. This sees the most aggressive scaling in the entire simulation, rocketing from <b>61%</b> (at 20% budget) to <b>86%</b> (at 100% budget). The clinics heavily faked the data, and L1 copied those massive lies. When L2 uses a physical tape measure, the physical discrepancy is so violent that L2 instantly uncovers the collusion network.</li>
+<li style="margin-bottom: 10px;"><b>(Bad L0 + Bad L1):</b><br> 
+<i>Hypothesis:</i> Due to data drift and severe collusion, L2 finds a lot of bad L1s.<br>
+<i>Data Result:</i> Verified. This sees the most aggressive scaling in the entire simulation, rocketing from <b>61%</b> (at 20% budget) to <b>86%</b> (at 100% budget). The clinics heavily faked the data, and L1 copied those massive lies. When L2 uses a physical tape measure, the physical discrepancy is so violent that L2 instantly uncovers the collusion network.</li>
 </ul>
                 
 <b>5. Conclusion & Implications:</b><br>
