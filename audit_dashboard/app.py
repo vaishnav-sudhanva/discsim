@@ -533,7 +533,7 @@ We are testing L1's localized competence. Our hypothesis is that L0 fraud is a s
 The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Other observation is that Good L1 are good at Ranking Bad L0, and Bad L1 is not able to rank Good L0 correctly. Bad L1 Ranks Bad L0 with relatively high accuracy, this shows that, even when L1 is Bad, L1 measurements are able to identify bad L0 under them to the extent that 3-4 (out of 8) is true. As in, if a bad L1 gives you a list of 8 L0 saying that these are the worst L0 in his region, then out of that list 3-4 are actually very bad.<br><br>
 
 
-<b>7. Open Questions for Discussion:</b><br>
+<b>5. Open Questions for Discussion:</b><br>
 <ul>
 <li>Can we propose alternative performance metric (Like RMSE) that increases the ranking accuracy of L1.</li>
 </ul>
@@ -712,7 +712,7 @@ Our objective is to evaluate a core hypothesis: <i>Does L2 efficiently identify 
 The L2 Ranking Accuracy in Ranking Worst L1 increase as L2 Budget increases. Even at Low L1 Budgets, L2 Ranking Accuracy is high. The effect of L2 Ranking Accuracy is very minimal in universes where L1 is Good.<br><br>
 
 
-<b>7. Open Questions for Discussion:</b><br>
+<b>6. Open Questions for Discussion:</b><br>
 <ul>
 <li>If our total operational budget is capped, what is the absolute optimal percentage split between L1 funding and L2 funding?</li>
 </ul>
