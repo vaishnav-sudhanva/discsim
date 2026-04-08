@@ -593,10 +593,65 @@ Based on the current results, we are not able to conclude anything with signific
 
 with tab4:
     st.markdown("### L2 Ranking L1 by L1 Budget")
-    sel_uni_t4 = st.selectbox("Select Universe", options=df['Universe'].unique(), key='t4_uni', index=list(df['Universe'].unique()).index("Normal") if "Normal" in df['Universe'].unique() else 0)
-    fig4 = plot_4_robustness(df, v3_col, selected_metric_label, sel_uni_t4)
-    if fig4: st.pyplot(fig4)
+    # 1. Initialize Session State for the "Click to Expand" feature in Tab 4
+    if 'expanded_uni_t4' not in st.session_state:
+        st.session_state.expanded_uni_t4 = None
 
+    # =====================================================================
+    # EXPANDED VIEW (Triggered when a user clicks a specific universe)
+    # =====================================================================
+    if st.session_state.expanded_uni_t4:
+        # Back Button
+        if st.button("⬅️ Back to 3x2 Grid View", key="back_btn_t4"):
+            st.session_state.expanded_uni_t4 = None
+            st.rerun()
+            
+        st.markdown(f"#### 🔍 Expanded View: {st.session_state.expanded_uni_t4}")
+        
+        # Plot the expanded chart
+        fig4 = plot_4_robustness(df, v3_col, selected_metric_label, st.session_state.expanded_uni_t4)
+        if fig4:
+            st.pyplot(fig4)
+            
+    # =====================================================================
+    # GRID VIEW (Default State: Shows all universes in 3x2 grid)
+    # =====================================================================
+    else:
+        st.markdown("#### 🌍 Universe Grid (Click 'Expand' to analyze specific dynamics)")
+        universes = list(df['Universe'].unique())
+        
+        # Row 1 (First 3 Universes)
+        cols_r1 = st.columns(3)
+        for i in range(3):
+            if i < len(universes):
+                uni = universes[i]
+                with cols_r1[i]:
+                    st.markdown(f"<div style='text-align: center; font-weight: bold;'>{uni}</div>", unsafe_allow_html=True)
+                    fig_small = plot_4_robustness(df, v3_col, selected_metric_label, uni)
+                    if fig_small:
+                        st.pyplot(fig_small)
+                    # Expand Button
+                    if st.button(f"🔍 Expand {uni}", key=f"btn_t4_{uni}"):
+                        st.session_state.expanded_uni_t4 = uni
+                        st.rerun()
+
+        st.markdown("---")
+        
+        # Row 2 (Remaining Universes)
+        cols_r2 = st.columns(3)
+        for i in range(3, 6):
+            if i < len(universes):
+                uni = universes[i]
+                with cols_r2[i-3]:
+                    st.markdown(f"<div style='text-align: center; font-weight: bold;'>{uni}</div>", unsafe_allow_html=True)
+                    fig_small = plot_4_robustness(df, v3_col, selected_metric_label, uni)
+                    if fig_small:
+                        st.pyplot(fig_small)
+                    # Expand Button
+                    if st.button(f"🔍 Expand {uni}", key=f"btn_t4_{uni}"):
+                        st.session_state.expanded_uni_t4 = uni
+                        st.rerun()
+                        
     st.markdown("""
 <div style="background-color: #f8f9fa; border-left: 6px solid #8e44ad; padding: 20px; border-radius: 5px; margin-top: 20px;">
 
@@ -635,30 +690,43 @@ with tab5:
 <div style="background-color: #f8f9fa; border-left: 6px solid #f39c12; padding: 20px; border-radius: 5px; margin-top: 20px;">
 
 <b>1. Setup & Universe Inputs:</b><br>
-This heatmap collapses the tactical layer to look purely at systemic funding allocations across the 266k population pathways.<br><br>
+Having established the overall ceilings of the L2 Auditor, we check how Ranking Accuracy behaves with fixed budget of L1 and changing budgets of L2.</i><br><br>
 
 <b>2. Variables & Mathematical Calculation:</b><br>
-<i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum).<br>
-<i>Y-Axis:</i> <b>L2 Audit Budget</b> (20% to 100% of maximum).<br>
-<i>Color Scale (Z-Axis):</i> <b>Maximum Diagnostic Accuracy (V3)</b>.<br>
-<i>Calculation:</i> For every intersection of L1 and L2 funding, the engine finds the single best tactical deployment (the highest V3 Overlap) and plots that maximum possible accuracy. The calculation remains <code>abs(L2_haz - L1_haz)</code> evaluated against L1's spreadsheet.<br><br>
+<i>X-Axis:</i> <b>L2 Breadth: No. of L0 Visited.</b> For the fixed L2's Budget, we fix the No. of L0 audited by L2. Say L2's Budget is 100, adn it is visiting 5 L0, we automatically fix 100/5= 20 Kids Sampled by L2 in each L0 visited.<br>
+<i>Y-Axis:</i> <b>L2 Identifying Worst L1</b>.<br>
+<i>Color Scale (Z-Axis):</i> <b>Colour varying wrt L2 Busget</b>.<br>
+<i>Calculation:</i> For every intersection of L1 and L2 Budget, we let the L2 audit samples only from the subset of samples measured by L1. The calculation remains <code>abs(L2_haz - L1_haz)</code> evaluated against L1's real score |L1-Real|.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-We are testing the financial trade-off between paying for initial data collection (L1) versus paying for auditing (L2). Our hypothesis is that L1 funding serves as the absolute foundation of accountability, and therefore, shifting budget to the X-Axis will yield higher returns than shifting budget to the Y-Axis.<br><br>
+Our objective is to evaluate a core hypothesis: <i>Does L2 efficiently identify the worst L1 supervisors at low budgets, and how does sensitivity (Good vs Bad L1) behavior affect L2's Ranking Accuracy? We assume that for bad L1, L2 Ranking Accuracy increase as L2 Budget increases and for good L1, L2 Ranking Accuracy is not effective with increasing L2 budget.<br><br>
 
 <b>4. Results & Analysis:</b><br>
-The heatmap visually proves the hypothesis. Notice how the colors shift to green much faster when you move horizontally (increasing L1) compared to moving vertically (increasing L2). For example, a 60% L1 / 20% L2 split (wide foundation, light audit) yields drastically higher accountability than a 20% L1 / 60% L2 split (poor foundation, heavy audit).<br><br>
+<ul>
+    <li style="margin-bottom: 10px;"><b>(Good L0 + Good L1):</b><br> 
+    <i>Hypothesis:</i> L2 does not have high scope because everyone is honest.<br>
+    <i>Data Result:</i> Verified. At a 20% budget, L2 hits <b>68%</b> accuracy. At a 100% budget, it actually drops to <b>65%</b>. Because there is zero true fraud, L2 provides no added value. They are just capturing the mathematical noise of natural biological growth (data drift) between measurements.</li>
 
+    <li style="margin-bottom: 10px;"><b>(Good L0 + Bad L1):</b><br> 
+    <i>Hypothesis:</i> Even though L1 just copies accurate L0 data, L2 will catch L1 because of Data Drift (biological growth).<br>
+    <i>Data Result:</i> Verified. L2 scales from <b>68%</b> (at 20% budget) up to <b>83%</b> (at 100% budget). L1 copied Day 0 data. When L2 measures at Day 30, the 30-day biological growth acts as an inescapable "tracer dye." L2 easily spots that the children are biologically older than the supervisor reported.</li>
+
+    <li style="margin-bottom: 10px;"><b>(Bad L0 + Good L1):</b><br>
+    <i>Hypothesis:</i> L2 has less power finding bad L1s, but L1 handles the L0 fraud.<br>
+    <i>Data Result:</i> Verified. The accuracy completely flatlines: <b>73%</b> (at 20% budget) and <b>68%</b> (at 100% budget). Because L1 is honest, the spreadsheet they submit to Headquarters is already highly accurate. When L2 arrives, the disease is already cured. L2 scaling provides zero diagnostic return on investment here.</li>
+
+    <li style="margin-bottom: 10px;"><b>(Bad L0 + Bad L1):</b><br> 
+    <i>Hypothesis:</i> Due to data drift and severe collusion, L2 finds a lot of bad L1s.<br>
+    <i>Data Result:</i> Verified. This sees the most aggressive scaling in the entire simulation, rocketing from <b>61%</b> (at 20% budget) to <b>86%</b> (at 100% budget). The clinics heavily faked the data, and L1 copied those massive lies. When L2 uses a physical tape measure, the physical discrepancy is so violent that L2 instantly uncovers the collusion network.</li>
+</ul>
+                
 <b>5. Conclusion & Implications:</b><br>
-You cannot audit a blank page. If L1 is underfunded, the data simply doesn't exist for L2 to audit. Financial planners should secure at least a 60% L1 base budget before heavily scaling the L2 accountability apparatus.<br><br>
+The L2 Ranking Accuracy in Ranking Worst L1 increase as L2 Budget increases. Even at Low L1 Budgets, L2 Ranking Accuracy is high. The effect of L2 Ranking Accuracy is very minimal in universes where L1 is Good. You cannot audit a blank page. If L1 is underfunded.<br><br>
 
-<b>6. Assurance of Robustness:</b><br>
-By selecting the "Mafia" or "Blind Spot" universes from the dropdown, you can verify that even in the worst-case scenarios of systemic fraud, the fundamental law of "L1 Foundation First" remains mathematically unbreakable.<br><br>
 
 <b>7. Open Questions for Discussion:</b><br>
 <ul>
 <li>If our total operational budget is capped, what is the absolute optimal percentage split between L1 funding and L2 funding?</li>
-<li>Are we currently over-investing in the L2 audit layer to compensate for a fundamentally underfunded L1 data collection layer?</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -795,7 +863,7 @@ We are testing the interaction between L1's initial sampling strategy and L2's a
 This heatmap serves as the operational menu for field leadership. If an L1 supervisor deployed a specific strategy (Left Column), leadership can scan the corresponding row to the right to find the "greenest" execution strategy for L2. Misaligning L2's depth with L1's initial breadth can cause accuracy to drop significantly without saving any budget.<br><br>
 
 <b>5. Assurance of Robustness:</b><br>
-By viewing the "Normal" universe, we see the realistic operational bounds with natural human measurement errors included. You can verify the stability of these tactics by cycling through the extreme edge cases (Mafia, Utopia) in the grid above.<br><br>
+By viewing the "Normal" universe, we see the realistic operational bounds with natural human measurement errors included.<br><br>
 
 <b>6. Open Questions for Discussion:</b><br>
 <ul>
