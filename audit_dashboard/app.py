@@ -493,15 +493,12 @@ This module evaluates a simulated global population of 266,000 children. We have
 <i>Calculation:</i> We calculate Measured Rank and Real Rank. The Measured Rank is obtained by calculating <code>abs(L1 HAZ Score - L0 HAZ Score)</code> (of children sampled by L1 only) and then ranking the L1 Regions from worst to best (Descending Order) to identify the actual lowest-performing L1 Regions. The Real Rank is obtained by calculating <code>abs(L1 HAZ Score - Real HAZ Score)</code> (of all children) for each region and ranking them in descending order. The Y-Axis represents the percentage of the overlap between the Measured & Real Ranking L1 Regions.<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
-This plot tests the capability of the L1 supervisor to diagnose systemic failure when observing only a localized sample of the total region. 
+This plot tests the capability of the L1 supervisor to identify bad L1 Regions when observing only a localized sample of the total region. 
                 The hypothesis is that Ranking Accuracy will scale linearly with sample size.<br><br>
 
 <b>4. Results & Analysis:</b><br>
 The results confirm the structural hypothesis but indicate a performance asymptote. 
-                As the base budget increases, the detection rate rises before ultimately flattening out. In the <b>Normal</b> environment, natural measurement variance ($\pm$ 1.0cm) prevents perfect ranking of borderline cases, creating a strict upper bound. Conversely, in highly manipulated environments, the delta between accurate data and fabricated data is statistically significant enough that a 60% sample budget captures the majority of critical failures.<br><br>
-
-<b>5. Conclusion & Implications:</b><br>
-To accurately diagnose the global state of a region, the L1 operational budget must meet a minimum threshold of ~60%. Below this threshold, unobserved geographical blind spots severely degrade diagnostic power. This loss of primary intelligence cannot be mathematically recovered by subsequent L2 auditing.<br><br>
+                As the base L1 sample increases, the detection rate rises before ultimately flattening out. In the <b>Normal</b> environment, natural measurement variance ($\pm$ 1.0cm) prevents perfect ranking, creating a strict upper bound. And in universes without measurement error, the Accuracy drops because of data drift error.<br><br>
 
 
 </ul>
@@ -526,24 +523,19 @@ This is an extension of plot 1. We rank the L0 measured by L1 unders its L1 Regi
 
 <b>2. Variables & Mathematical Calculation:</b><br>
 <i>X-Axis:</i> <b>L1 Base Budget</b> (20% to 100% of maximum capacity).<br>
-<i>Y-Axis:</i> <b>Average Intra-Regional Overlap in Ranking</b>.<br>
-<i>Calculation:</i> We compare the L0 to L1's measurement: <code>abs(L1_haz - L0_haz)</code>.</b> We ask: "Within the specific sample measured by L1, did they successfully catch the top 30% worst clinics?"<br><br>
+<i>Y-Axis:</i> <b>Average Intra-Regional Overlap in Ranking</b>. Ranking the bad L0 under L1<br>
+<i>Calculation:</i> We compare the L0 value to L1's measurement: <code>abs(L1_haz - L0_haz)</code>.</b> We ask: "Within the specific sample measured by L1, did they successfully catch the top 30% worst clinics?"<br><br>
 
 <b>3. Objective & Hypothesis:</b><br>
 We are testing L1's localized competence. Our hypothesis is that L0 fraud is a systemic issue and as L1 is visiting all L0 with increasing budget/samples in each round. We will see a large amount of worst L0 caught at smaller budgets and the effect would be consistent across increasing budgets, and at very high budgets, we will have maximum number of L0 caught.<br>
 
 <b>4. Results & Analysis:</b><br>
-The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Because the denominator shrinks to match L1's sample size, an L1 supervisor with a 20% budget appears highly accurate within their tiny footprint. The mathematical logic holds: if you only check 5 clinics, it is relatively easy to rank those 5 clinics accurately.<br><br>
+The results strongly validate the hypothesis. The lines on this chart are dramatically flatter and higher than Plot 1. Other observation is that Good L1 are good at Ranking Bad L0, and Bad L1 is not able to rank Good L0 correctly. Bad L1 Ranks Bad L0 with relatively high accuracy, this shows that, even when L1 is Bad, L1 measurements are able to identify bad L0 under them to the extent that 3-4 (out of 8) is true. As in, if a bad L1 gives you a list of 8 L0 saying that these are the worst L0 in his region, then out of that list 3-4 are actually very bad.<br><br>
 
-<b>5. Conclusion & Implications:</b><br>
-This reveals a massive administrative danger: <b>The False Sense of Security</b>. If leadership only evaluates supervisors based on what they submit (Intra-Regional), supervisors will look highly competent, even if they are entirely blind to 80% of their actual district. Evaluating L1 requires global benchmarks, not just local ones.<br><br>
-<br>
-This dynamic is proven across the sensitivity datasets. Even in "Blind Spot" (where L1 is lazy), their Intra-Regional score behaves differently than their Global score, mathematically proving the risk of localized evaluation metrics.<br><br>
 
 <b>7. Open Questions for Discussion:</b><br>
 <ul>
-<li>Are our current KPIs inadvertently rewarding supervisors for Intra-Regional accuracy while ignoring their massive Global Blind Spots?</li>
-<li>How do we design a performance metric that forces supervisors to value breadth (visiting more clinics) over depth?</li>
+<li>Can we propose alternative performance metric (Like RMSE) that increases the ranking accuracy of L1.</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
