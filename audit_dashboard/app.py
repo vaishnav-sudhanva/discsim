@@ -704,24 +704,20 @@ Our objective is to evaluate a core hypothesis: <i>Does L2 efficiently identify 
 <b>4. Results & Analysis:</b><br>
 <ul>
 <li style="margin-bottom: 10px;"><b>(Good L0 + Good L1):</b><br> 
-<i>Hypothesis:</i> L2 does not have high scope because everyone is honest.<br>
-<i>Data Result:</i> Verified. At a 20% budget, L2 hits <b>68%</b> accuracy. At a 100% budget, it actually drops to <b>65%</b>. Because there is zero true fraud, L2 provides no added value. They are just capturing the mathematical noise of natural biological growth (data drift) between measurements.</li>
+<i>Data Result:</i> At a 20% budget, L2 hits <b>68%</b> accuracy. At a 100% budget, it actually drops to <b>65%</b>. Because there is zero true fraud, L2 provides no added value. They are just capturing the mathematical noise of natural biological growth (data drift) between measurements.</li>
 
 <li style="margin-bottom: 10px;"><b>(Good L0 + Bad L1):</b><br> 
-<i>Hypothesis:</i> Even though L1 just copies accurate L0 data, L2 will catch L1 because of Data Drift (biological growth).<br>
-<i>Data Result:</i> Verified. L2 scales from <b>68%</b> (at 20% budget) up to <b>83%</b> (at 100% budget). L1 copied Day 0 data. When L2 measures at Day 30, the 30-day biological growth acts as an inescapable "tracer dye." L2 easily spots that the children are biologically older than the supervisor reported.</li>
+<i>Data Result:</i> L2 scales from <b>68%</b> (at 20% budget) up to <b>83%</b> (at 100% budget). L2 catches bad L1.</li>
 
 <li style="margin-bottom: 10px;"><b>(Bad L0 + Good L1):</b><br>
-<i>Hypothesis:</i> L2 has less power finding bad L1s, but L1 handles the L0 fraud.<br>
-<i>Data Result:</i> Verified. The accuracy completely flatlines: <b>73%</b> (at 20% budget) and <b>68%</b> (at 100% budget). Because L1 is honest, the spreadsheet they submit to Headquarters is already highly accurate. When L2 arrives, the disease is already cured. L2 scaling provides zero diagnostic return on investment here.</li>
+<i>Data Result:</i> The accuracy completely flatlines: <b>73%</b> (at 20% budget) and <b>68%</b> (at 100% budget). Because L1 is honest, the measurement is already highly accurate. L2 scaling provides zero diagnostic return on investment here.</li>
 
 <li style="margin-bottom: 10px;"><b>(Bad L0 + Bad L1):</b><br> 
-<i>Hypothesis:</i> Due to data drift and severe collusion, L2 finds a lot of bad L1s.<br>
-<i>Data Result:</i> Verified. This sees the most aggressive scaling in the entire simulation, rocketing from <b>61%</b> (at 20% budget) to <b>86%</b> (at 100% budget). The clinics heavily faked the data, and L1 copied those massive lies. When L2 uses a physical tape measure, the physical discrepancy is so violent that L2 instantly uncovers the collusion network.</li>
+<i>Data Result:</i> L2 Ranking Accuracy increases from <b>61%</b> (at 20% budget) to <b>86%</b> (at 100% budget). When L2 measures L1, discrepancy is so high that L2 instantly flags the bad L1.</li>
 </ul>
                 
 <b>5. Conclusion & Implications:</b><br>
-The L2 Ranking Accuracy in Ranking Worst L1 increase as L2 Budget increases. Even at Low L1 Budgets, L2 Ranking Accuracy is high. The effect of L2 Ranking Accuracy is very minimal in universes where L1 is Good. You cannot audit a blank page. If L1 is underfunded.<br><br>
+The L2 Ranking Accuracy in Ranking Worst L1 increase as L2 Budget increases. Even at Low L1 Budgets, L2 Ranking Accuracy is high. The effect of L2 Ranking Accuracy is very minimal in universes where L1 is Good.<br><br>
 
 
 <b>7. Open Questions for Discussion:</b><br>
