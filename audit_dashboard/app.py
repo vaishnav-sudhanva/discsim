@@ -860,3 +860,95 @@ By viewing the "Normal" universe, we see the realistic operational bounds with n
 </ul>
 </div>
 """, unsafe_allow_html=True)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+
+# ==============================================================================
+# 4. LIVE COMMENTING SYSTEM (GOOGLE SHEETS INTEGRATION)
+# ==============================================================================
+st.markdown("---")
+st.markdown("### 💬 Live Dashboard Discussion")
+
+# 1. Securely connect to Google Sheets
+@st.cache_resource
+def init_connection():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    credentials = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes
+    )
+    return gspread.authorize(credentials)
+
+try:
+    client = init_connection()
+    # Change "Dashboard_Comments" if you named your sheet differently!
+    sheet = client.open("ADQ_STREAMLIT_COMMENTS").sheet1 
+
+    # 2. Display Existing Comments
+    data = sheet.get_all_records()
+    
+    if data:
+        for row in data:
+            st.info(f"**{row['User']}** tagged **[{row['Tag']}]** at {row['Timestamp']}:\n\n{row['Comment']}")
+    else:
+        st.write("No comments yet. Be the first!")
+
+    st.markdown("#### Add a Comment")
+
+    # 3. The Input Form
+    with st.form("comment_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            user_name = st.text_input("Your Name / Initials")
+        with col2:
+            tag_option = st.selectbox(
+                "What are you commenting on?",
+                options=[
+                    "General Dashboard", 
+                    "Setup Documentation", 
+                    "Tab 1: Global Sensitivity", 
+                    "Tab 2: Intra-Regional", 
+                    "Tab 3: Breadth vs Depth",
+                    "Tab 4: Budget Robustness",
+                    "Tab 5: L2 Breadth Matrix",
+                    "Tab 6: Heatmap Matrix"
+                ]
+            )
+        
+        comment_text = st.text_area("Write your comment here...")
+        submitted = st.form_submit_button("Post Comment")
+        
+        if submitted:
+            if user_name and comment_text:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Write to Google Sheets
+                sheet.append_row([timestamp, user_name, tag_option, comment_text])
+                st.success("Comment posted successfully!")
+                st.rerun() # Refresh to show the new comment
+            else:
+                st.error("Please provide both your name and a comment.")
+
+except Exception as e:
+    st.error(f"Could not connect to the comments database. Error: {e}")
