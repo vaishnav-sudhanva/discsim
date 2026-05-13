@@ -22,7 +22,7 @@ def load_data():
     # 2. Tell it to look for the CSV specifically in that folder
   #  search_pattern = os.path.join(current_dir, "Tracer_Master_DB_Percentages_*.csv")
     # 2. Look inside the subfolder for the new Height/Weight file
-    search_pattern = os.path.join(current_dir, "Calculated_Tracer_Metrics", "Tracer_Master_DB_Height_Weight_*.csv")
+    search_pattern = os.path.join(current_dir,  "Tracer_Master_DB_Height_Weight_*.csv")
     csv_files = glob.glob(search_pattern)
     
     if not csv_files:
