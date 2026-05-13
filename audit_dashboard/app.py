@@ -35,12 +35,13 @@ def load_data():
     df['L2_Pct_Num'] = df['L2_Budget_Pct'].str.replace('%', '').astype(int)
     
     # Rename universes to analytical names
-    df['Universe'] = df['Universe'].replace({
-        "Utopia": "Good L0 Good L1",
-        "Blind Spot": "Good L0 Bad L1",
-        "Whistleblowers": "Bad L0 Good L1",
-        "Mafia": "Bad L0 Bad L1",
-        "Normal": "Normal"
+    # Map the new Scenario column to the exact names the Dashboard expects
+    df['Universe'] = df['Scenario'].replace({
+        "1_Good_L0_Good_L1": "Good L0 Good L1",
+        "2_Bad_L0_Lazy_L1": "Good L0 Bad L1",
+        "3_Bad_L0_Good_L1": "Bad L0 Good L1",
+        "4_Bad_L0_Corrupt_L1": "Bad L0 Bad L1",
+        "5_Normal_L0_Normal_L1": "Normal"
     })
     
     return df
@@ -53,13 +54,25 @@ if df is None:
 # ==============================================================================
 # 1. GLOBAL UI & FILTERS (SIDEBAR)
 # ==============================================================================
+# ==============================================================================
+# 1. GLOBAL UI & FILTERS (SIDEBAR)
+# ==============================================================================
 st.sidebar.title("⚙️ Global Dashboard Controls")
 
-# Add the Height/Weight toggle right here!
+# 1. Height/Weight Toggle
 selected_indicator = st.sidebar.radio("📏 Select Biological Indicator", ["Height", "Weight"])
 
-# Tell the dataframe to filter everything by the user's choice BEFORE plotting
-df = df[df['Indicator'] == selected_indicator]
+# 2. Spatial Correlation (Rho) Toggle
+# This ensures we don't accidentally plot rho=0.0 and rho=0.7 on top of each other!
+selected_rho = st.sidebar.radio(
+    "🗺️ Spatial Fraud Clustering (Rho)", 
+    options=[0.0, 0.7], 
+    format_func=lambda x: "Off (rho=0.0)" if x == 0.0 else "On (rho=0.7)"
+)
+
+# 3. Filter the dataframe BEFORE plotting
+# We convert df['Rho_Model'] to float just in case it was saved as a string
+df = df[(df['Indicator'] == selected_indicator) & (df['Rho_Model'].astype(float) == selected_rho)]
 
 metric_options = {
     "MAE (Mean Absolute Error)": "MAE", 
