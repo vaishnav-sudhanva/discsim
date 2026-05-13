@@ -53,6 +53,12 @@ if df is None:
 # ==============================================================================
 st.sidebar.title("⚙️ Global Dashboard Controls")
 
+# Add the Height/Weight toggle right here!
+selected_indicator = st.sidebar.radio("📏 Select Biological Indicator", ["Height", "Weight"])
+
+# Tell the dataframe to filter everything by the user's choice BEFORE plotting
+df = df[df['Indicator'] == selected_indicator]
+
 metric_options = {
     "MAE (Mean Absolute Error)": "MAE", 
     "RMSE (Root Mean Square Error)": "RMSE", 
