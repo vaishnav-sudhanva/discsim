@@ -23,7 +23,7 @@ def calculate_haz(height, age, sex, haz_params):
     Returns:
         pd.Series: HAZ scores.
     """
-    # Make sure height, age, sex are the same length, else throw an error
+    # Make sure height, age, sex and are the same length, else throw an error
     if not (len(height) == len(age) == len(sex)):
         raise ValueError("Input series must have the same length")
 
@@ -38,7 +38,7 @@ def calculate_haz(height, age, sex, haz_params):
 """
 The transition from the old height_from_haz function to the new version introduces significant biological and mathematical refinements.
 Mathematical Engine Swap: Replaced the generic invert_anthro_zscore call with the explicit Box-Cox power transformation formula ($height = M \times ((HAZ \times L \times S) + 1)^{1/L}$).
-
+Biological Position Adjustment: Added a mandatory -0.7cm correction for children $\ge$ 730 days (2 years). This accounts for the WHO standard shift from measuring "Lying Down" (Length) to "Standing Up" (Height), where the spine compresses.
 Index Preservation: Wrapped the final output in a pd.Series that explicitly reattaches the original haz.index. This prevents the "Pandas Index Trap" where row labels are lost during calculation.
 Documentation: Added a detailed docstring defining the input requirements for haz, age, sex, and haz_params.
 Structural Impact: Safe. The function signature remains identical. It still accepts four positional arguments and returns a pd.Series, maintaining full compatibility with your existing application.
@@ -51,8 +51,7 @@ def height_from_haz(haz, age, sex, haz_params):
         haz (pd.Series): HAZ scores.
         age (pd.Series): Age measurements.
         sex (pd.Series): Sex (gender) of the children.
-       
-        
+        loh (pd.Series): Whether height was measured standing or lying down.
         haz_params (pd.DataFrame): HAZ parameters from WHO growth standards.
 
     Returns:
@@ -225,8 +224,7 @@ def weight_from_whz(whz, height, sex, loh, whz_params_lying, whz_params_standing
     # .sort_index() is CRITICAL. Because we split the data by LOH, the rows are out of order.
     # sorting by the index puts Child #1, Child #2, Child #3 perfectly back in their original rows.
     return pd.concat([weight_0, weight_1]).sort_index()
-# we are using this. in case the raw data from L0 contains loh other than 1,2. then this safely excludes the NA ones, but still hold the array together and then  
-#    return pd.concat([weight_0, weight_1]).reindex(whz.index)
+
 
 
 
@@ -286,10 +284,6 @@ def calculate_whz(height, weight, sex, loh, whz_params_lying, whz_params_standin
     # pd.concat glues the lying-down Z-scores and standing-up Z-scores back into one single column.
     # .sort_index() puts them back into the exact original row order they were passed in as.
     return pd.concat([whz_0, whz_1]).sort_index()
-# You must replace .sort_index() with .reindex(height.index) (or weight.index). 
-# This forces the final output to strictly mirror the original input length, 
-# safely returning NaN for any child with an invalid measurement position.
-#   return pd.concat([whz_0, whz_1]).reindex(height.index)
 
 
 
