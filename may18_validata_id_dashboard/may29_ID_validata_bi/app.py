@@ -19,13 +19,14 @@ if not os.path.exists(DATA_DIR):
 
 MASTER_REGISTRY_PATH = os.path.join(DATA_DIR, "simulation_master_registry.csv")
 
-# Mapped to your most recent successful May 28th runs
-# Map your exact UI names to the exact file names in the 'data' folder
+# ==============================================================================
+# CHANGE MADE HERE: Removed "Tracer_Master_DB_" and ".csv" so it matches the registry
+# ==============================================================================
 PRESET_MAPPING = {
     "Select a Preset...": None,
-    "Good L1, Good L0 (May 29)": "Tracer_Master_DB_Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255.csv",
+    "Good L1, Good L0": "Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255",
     # Add your other presets here as you generate them!
-    # "Bad L1, Bad L0 (May 29)": "Tracer_Master_DB_Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_XXXXXX.csv",
+    # "Bad L1, Bad L0": "Bad_L0_Bad_L1_..._Eval_...",
 }
 
 def apply_preset():
@@ -109,23 +110,6 @@ def data_type_parser(val):
         return float(val)
     except ValueError:
         return 0.0
-
-def log_simulation_run(params_dict, universe_file, results_file, registry_path="simulation_run_registry.csv"):
-    """Logs individual custom run metrics into a separate logging CSV."""
-    new_row = {
-        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Universe_Data_File": universe_file,
-        "Calculated_Results_File": results_file
-    }
-    new_row.update(params_dict)
-    
-    df_new = pd.DataFrame([new_row])
-    if os.path.exists(registry_path):
-        df_existing = pd.read_csv(registry_path)
-        df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        df_combined.to_csv(registry_path, index=False)
-    else:
-        df_new.to_csv(registry_path, index=False)
 
 # ==============================================================================
 # 2. CORE RENDERING ENGINE
