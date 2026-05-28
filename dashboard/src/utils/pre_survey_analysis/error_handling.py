@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# API_BASE_URL = "http://localhost:8000"
+# ERROR_HANDLING_ENDPOINT = f"{API_BASE_URL}/error-handling"
+
 API_BASE_URL = os.getenv("API_BASE_URL")
 
 ERROR_HANDLING_ENDPOINT = f"{API_BASE_URL}/error-handling"
