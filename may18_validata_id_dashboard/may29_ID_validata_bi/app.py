@@ -24,7 +24,10 @@ MASTER_REGISTRY_PATH = os.path.join(DATA_DIR, "simulation_master_registry.csv")
 # ==============================================================================
 PRESET_MAPPING = {
     "Select a Preset...": None,
-    "Good L1, Good L0": "Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255",
+    "Good L1 Good L0": "Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255",
+    "Bad L1 Good L0": "Good_L0_Bad_L1_20260528_150009_Calc_1sims_Eval_20260529_014234",
+    "Good L1 Bad L0": "Bad_L0_Good_L1_20260528_151136_Calc_1sims_Eval_20260529_015516",
+    "Bad L1 Bad L0": "Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_021745"
     # Add your other presets here as you generate them!
     # "Bad L1, Bad L0": "Bad_L0_Bad_L1_..._Eval_...",
 }
@@ -247,8 +250,17 @@ def render_nested_simulation_ui():
         st.markdown("### Interactive Plot Filters")
         st.info("The data has been pre-calculated for all budget scenarios. Use these filters to instantly update the charts below without re-running the simulation.")
         
-        filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 1])
+        # Changed to 4 columns
+        filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([2, 2, 2, 1])
         budget_options = [f"{i}0%" for i in range(1, 11)]
+        
+        # Extract available target percentiles directly from the CSV
+        if 'Target_Percentile' in strategy_df.columns:
+            target_options = sorted(strategy_df['Target_Percentile'].unique().tolist())
+            default_target = "30%" if "30%" in target_options else target_options[0]
+        else:
+            target_options = ["30%"]
+            default_target = "30%"
         
         with filter_col1:
             ui_l1_budget = st.selectbox("L1 Budget Filter (Applies to all plots)", budget_options, index=5, help=TOOLTIPS.get("l1_budget", ""))
@@ -259,12 +271,17 @@ def render_nested_simulation_ui():
             else:
                 st.selectbox("L2 Budget Filter", ["N/A (L2 Disabled)"], disabled=True)
                 ui_l2_budget = "N/A"
-
+                
+        # Added the new Target Percentile Dropdown in Col 3
         with filter_col3:
+            ui_target_pct = st.selectbox("Target Catch Bracket", target_options, index=target_options.index(default_target), help="Filters all plots to show accuracy for catching this specific % of worst offenders.")
+
+        # Moved Download button to Col 4
+        with filter_col4:
             st.markdown("<br>", unsafe_allow_html=True)
             csv_data = strategy_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="Download Data (CSV)",
+                label="Download Data",
                 data=csv_data,
                 file_name='simulation_results.csv',
                 mime='text/csv',
@@ -286,9 +303,19 @@ def render_nested_simulation_ui():
             l2_pct_float = int(ui_l2_budget.replace("%", "")) / 100.0
             actual_l2_budget = int(actual_l1_budget * l2_pct_float)
 
+        # Slice the master dataframe by the selected Target Percentile BEFORE plotting!
+        if 'Target_Percentile' in strategy_df.columns:
+            active_df = strategy_df[strategy_df['Target_Percentile'] == ui_target_pct].copy()
+            current_target_float = float(ui_target_pct.replace('%', '')) / 100.0
+        else:
+            active_df = strategy_df.copy()
+            current_target_float = mem_p["target_percentile"]
+
         for ind in target_inds:
             st.markdown(f"<h2 style='text-align: center; color: #2c3e50; margin-top: 20px;'>=== RESULTS FOR {ind.upper()} ===</h2>", unsafe_allow_html=True)
-            df_ind = strategy_df[strategy_df['Indicator'] == ind]
+            
+            # Use active_df instead of strategy_df so the plots only see ONE target percentile at a time
+            df_ind = active_df[active_df['Indicator'] == ind]
             
             # --- CASE 1: Heatmap (Only if L2 is Yes) ---
             if mem_p["has_l2"] == "Yes":
@@ -318,7 +345,7 @@ def render_nested_simulation_ui():
                     l1_pct_str=ui_l1_budget, 
                     indicator=ind,
                     n_L0s_per_L1=mem_p["n_L0s_per_L1"],
-                    target_percentile=mem_p["target_percentile"]
+                    target_percentile=current_target_float
                 )
                 
                 if fig3: 
@@ -342,7 +369,7 @@ def render_nested_simulation_ui():
                     indicator=ind,
                     n_L0s_per_L1=mem_p["n_L0s_per_L1"],
                     n_children_per_L0=mem_p["n_children_per_L0"],
-                    target_percentile=mem_p["target_percentile"]
+                    target_percentile=current_target_float
                 )
                 
                 if fig2: 
