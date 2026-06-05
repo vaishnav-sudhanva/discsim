@@ -24,10 +24,22 @@ MASTER_REGISTRY_PATH = os.path.join(DATA_DIR, "simulation_master_registry.csv")
 # ==============================================================================
 PRESET_MAPPING = {
     "Select a Preset...": None,
-    "Good L1 Good L0": "Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255",
-    "Bad L1 Good L0": "Good_L0_Bad_L1_20260528_150009_Calc_1sims_Eval_20260529_014234",
+        "Good L1 Good L0": "Good_L0_Good_L1_20260602_003532_Step2_Iter_Eval_20260602_161620",
+        
+    "Bad L1 Good L0": "Good_L0_Bad_L1_20260602_010620_Step2_Iter_Eval_20260602_214652",
     "Good L1 Bad L0": "Bad_L0_Good_L1_20260528_151136_Calc_1sims_Eval_20260529_015516",
-    "Bad L1 Bad L0": "Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_021745"
+   "Bad L1 Bad L0": "Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_021745",
+
+ "Good L1 Good L0 V1": "Good_L0_Good_L1_20260603_173812_Step2_Iter_Eval_20260603_190640",
+        "Bad L1 Good L0 V1": "Good_L0_Bad_L1_20260603_221306_Step2_Iter_Eval_20260604_075210",
+    "Good L1 Bad L0 V1": "Bad_L0_Good_L1_20260604_001321_Step2_Iter_Eval_20260604_082126",
+      "Bad L1 Bad L0 V1": "Bad_L0_Bad_L1_20260604_021251_Step2_Iter_Eval_20260604_090856"
+
+    # "Bad L1 Bad L0": "Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_021745"
+    # "Good L1 Good L0": "Good_L0_Good_L1_20260528_145250_Calc_1sims_Eval_20260529_003255",
+    # "Bad L1 Good L0": "Good_L0_Bad_L1_20260528_150009_Calc_1sims_Eval_20260529_014234",
+    # "Good L1 Bad L0": "Bad_L0_Good_L1_20260528_151136_Calc_1sims_Eval_20260529_015516",
+    # "Bad L1 Bad L0": "Bad_L0_Bad_L1_20260528_152028_Calc_1sims_Eval_20260529_021745"
     # Add your other presets here as you generate them!
     # "Bad L1, Bad L0": "Bad_L0_Bad_L1_..._Eval_...",
 }
