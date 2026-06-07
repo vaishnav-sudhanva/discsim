@@ -1,0 +1,26 @@
+L1_Budget_Pct,L1_Strategy,L2_Budget_Pct,L2_Strategy,L1_Accuracy_vs_L0,L2_Accuracy_vs_L1
+20%,8 Clinics x 8 Kids,20%,3 Clinics x 3 Kids,33.0%,33.0%
+20%,8 Clinics x 8 Kids,40%,5 Clinics x 5 Kids,33.0%,56.0%
+20%,8 Clinics x 8 Kids,60%,6 Clinics x 6 Kids,33.0%,60.0%
+20%,8 Clinics x 8 Kids,80%,7 Clinics x 7 Kids,33.0%,64.0%
+20%,8 Clinics x 8 Kids,100%,8 Clinics x 8 Kids,33.0%,73.0%
+40%,12 Clinics x 12 Kids,20%,5 Clinics x 5 Kids,32.0%,54.0%
+40%,12 Clinics x 12 Kids,40%,7 Clinics x 7 Kids,32.0%,63.0%
+40%,12 Clinics x 12 Kids,60%,9 Clinics x 9 Kids,32.0%,70.0%
+40%,12 Clinics x 12 Kids,80%,10 Clinics x 10 Kids,32.0%,71.0%
+40%,12 Clinics x 12 Kids,100%,12 Clinics x 12 Kids,32.0%,79.0%
+60%,15 Clinics x 15 Kids,20%,6 Clinics x 6 Kids,36.0%,60.0%
+60%,15 Clinics x 15 Kids,40%,9 Clinics x 9 Kids,36.0%,67.0%
+60%,15 Clinics x 15 Kids,60%,11 Clinics x 11 Kids,36.0%,70.0%
+60%,15 Clinics x 15 Kids,80%,13 Clinics x 13 Kids,36.0%,77.0%
+60%,15 Clinics x 15 Kids,100%,15 Clinics x 15 Kids,36.0%,84.0%
+80%,17 Clinics x 15 Kids,20%,7 Clinics x 7 Kids,34.0%,66.0%
+80%,17 Clinics x 15 Kids,40%,10 Clinics x 10 Kids,34.0%,73.0%
+80%,17 Clinics x 15 Kids,60%,12 Clinics x 12 Kids,34.0%,74.0%
+80%,17 Clinics x 15 Kids,80%,14 Clinics x 14 Kids,34.0%,82.0%
+80%,17 Clinics x 15 Kids,100%,15 Clinics x 15 Kids,34.0%,83.0%
+100%,19 Clinics x 15 Kids,20%,7 Clinics x 7 Kids,36.0%,61.0%
+100%,19 Clinics x 15 Kids,40%,10 Clinics x 10 Kids,36.0%,68.0%
+100%,19 Clinics x 15 Kids,60%,13 Clinics x 13 Kids,36.0%,79.0%
+100%,19 Clinics x 15 Kids,80%,15 Clinics x 15 Kids,36.0%,84.0%
+100%,19 Clinics x 15 Kids,100%,16 Clinics x 15 Kids,36.0%,84.0%
