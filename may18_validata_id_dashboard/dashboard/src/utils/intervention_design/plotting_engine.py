@@ -8,10 +8,10 @@ from matplotlib.lines import Line2D
 # -------------------------------------------------------------------------
 # HELPER FUNCTIONS
 # -------------------------------------------------------------------------
-def get_target_clinics(target_pct_str):
+def get_target_clinics(target_pct_str, total_clinics):
     """Dynamically calculates physical clinic count based on the percentile string."""
     pct_val = int(target_pct_str.replace('%', ''))
-    return int(np.round(25 * (pct_val / 100)))
+    return int(np.round(total_clinics * (pct_val / 100)))
 
 def get_dynamic_colors(universes):
     """Dynamically assigns colors to ANY universe name passed from the UI."""
@@ -23,7 +23,7 @@ def get_dynamic_colors(universes):
 # -------------------------------------------------------------------------
 # PLOTTING FUNCTIONS
 # -------------------------------------------------------------------------
-def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_str):
+def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_str, total_kids=15):
     filtered_df = df[df['Universe'].isin(selected_unis)]
     if filtered_df.empty: return None
 
@@ -43,9 +43,11 @@ def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_s
         ax.fill_between(data['L1_Pct_Num'], data['mean_acc'] - data['ci95'], 
                         data['mean_acc'] + data['ci95'], color=uni_colors[uni], alpha=0.15)
 
-    ax.set_xlabel('Percentage of Children Sampled per L0: Total 15 Children per L0', fontsize=14, fontweight='bold', labelpad=15)
+    # ax.set_xlabel('Percentage of Children Sampled per L0: Total 15 Children per L0', fontsize=14, fontweight='bold', labelpad=15)
+    # ax.set_ylabel(f'Top {target_pct_str} Worst L1 Regions Caught (%)', fontsize=14, labelpad=15)
+# 🟢 Inject total_kids into the xlabel
+    ax.set_xlabel(f'Percentage of Children Sampled per L0: Total {total_kids} Children per L0', fontsize=14, fontweight='bold', labelpad=15)
     ax.set_ylabel(f'Top {target_pct_str} Worst L1 Regions Caught (%)', fontsize=14, labelpad=15)
-
     x_ticks = sorted(agg_df['L1_Pct_Num'].unique())
     ax.set_xticks(x_ticks)
     ax.set_xticklabels([f"{x}%" for x in x_ticks], fontsize=12)
@@ -63,7 +65,10 @@ def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_s
     plt.subplots_adjust(top=0.82)
     return fig
 
-def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pct_str):
+# def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pct_str):
+# 🟢 Add total_clinics and total_kids arguments
+def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pct_str, total_clinics=25, total_kids=15):
+    # ... (keep existing code) ...
     filtered_df = df[df['Universe'].isin(selected_unis)]
     if filtered_df.empty: return None
 
@@ -73,7 +78,8 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
     agg_df['std_acc'] = agg_df['std_acc'].fillna(0)
     agg_df['ci95'] = 1.96 * (agg_df['std_acc'] / np.sqrt(agg_df['count']))
 
-    target_clinics = get_target_clinics(target_pct_str)
+# 🟢 Pass the dynamic total_clinics to the helper function
+    target_clinics = get_target_clinics(target_pct_str, total_clinics)
     
     agg_df['mean_acc_count'] = agg_df['mean_acc'] * (target_clinics / 100)
     agg_df['ci_95_count'] = agg_df['ci95'] * (target_clinics / 100)
@@ -88,9 +94,11 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
         ax.fill_between(data['L1_Pct_Num'], data['mean_acc_count'] - data['ci_95_count'], 
                         data['mean_acc_count'] + data['ci_95_count'], color=uni_colors[uni], alpha=0.15)
 
-    ax.set_xlabel('Percentage of Children Sampled per L0: Total 15 Children per L0', fontsize=14, fontweight='bold', labelpad=15)
-    ax.set_ylabel(f'Top {target_pct_str} Worst L0 caught \n({target_clinics}/25 Target L0 in L1 Region)', fontsize=14, labelpad=15)
-
+    # ax.set_xlabel('Percentage of Children Sampled per L0: Total 15 Children per L0', fontsize=14, fontweight='bold', labelpad=15)
+    # ax.set_ylabel(f'Top {target_pct_str} Worst L0 caught \n({target_clinics}/25 Target L0 in L1 Region)', fontsize=14, labelpad=15)
+# 🟢 Inject the dynamic variables into the labels
+    ax.set_xlabel(f'Percentage of Children Sampled per L0: Total {total_kids} Children per L0', fontsize=14, fontweight='bold', labelpad=15)
+    ax.set_ylabel(f'Top {target_pct_str} Worst L0 caught \n({target_clinics}/{total_clinics} Target L0 in L1 Region)', fontsize=14, labelpad=15)
     x_ticks = sorted(agg_df['L1_Pct_Num'].unique())
     ax.set_xticks(x_ticks)
     ax.set_xticklabels([f"{x}%" for x in x_ticks], fontsize=12)
@@ -101,14 +109,17 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
         spine.set_linewidth(2.0)
         spine.set_color('black')
 
-    ax.legend(title='Simulated Universe', bbox_to_anchor=(0.5, 1.15), loc='upper center', 
-              ncol=min(5, len(selected_unis)), fontsize=11, framealpha=0.9, shadow=True)
-    plt.title(f"L1 Ranking of L0 in each L1 Region: Height Using [{metric_label}]", 
+    # ax.legend(title='Simulated Universe', bbox_to_anchor=(0.5, 1.15), loc='upper center', 
+    #           ncol=min(5, len(selected_unis)), fontsize=11, framealpha=0.9, shadow=True)
+    plt.title(f"L1 Ranking of L0 in each L1 Region: Height", 
               fontsize=16, fontweight='bold', pad=75)
     plt.subplots_adjust(top=0.82)
     return fig
 
-def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budget_str, target_pct_str):
+# def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budget_str, target_pct_str):
+# 🟢 Add total_clinics argument
+def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budget_str, target_pct_str, total_clinics=25):
+    # ... (keep existing code until the axis labels) ...
     filtered_df = df[(df['Universe'].isin(selected_unis)) & (df['L1_Budget_Pct'] == l1_budget_str)].copy()
     if filtered_df.empty: return None
 
@@ -137,11 +148,17 @@ def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budge
                      fmt='o-', markersize=8, color=uni_colors[uni], linewidth=2.5, 
                      capsize=5, capthick=1.5, label=uni, zorder=5)
 
+    # ax1.set_xlim(min(x_indices) - 0.5, max(x_indices) + 0.5)
+    # ax1.set_xticks(x_indices)
+    # ax1.set_xticklabels(x_breadth_labels, fontsize=12) 
     ax1.set_xlim(min(x_indices) - 0.5, max(x_indices) + 0.5)
     ax1.set_xticks(x_indices)
-    ax1.set_xticklabels(x_breadth_labels, fontsize=12) 
-    ax1.set_xlabel('BREADTH: No. of L0 Visited by L1 (Out of 25)', fontsize=14, fontweight='bold', labelpad=15)
+    ax1.set_xticklabels(x_breadth_labels, fontsize=12)
+    # 🟢 Inject total_clinics into the xlabel
+    ax1.set_xlabel(f'BREADTH: No. of L0 Visited by L1 (Out of {total_clinics})', fontsize=14, fontweight='bold', labelpad=15)
     ax1.set_ylabel(f'Top {target_pct_str} Worst L1 Regions Caught (%)', fontsize=14, fontweight='bold')
+    # ax1.set_xlabel('BREADTH: No. of L0 Visited by L1 (Out of 25)', fontsize=14, fontweight='bold', labelpad=15)
+    # ax1.set_ylabel(f'Top {target_pct_str} Worst L1 Regions Caught (%)', fontsize=14, fontweight='bold')
 
     ax2 = ax1.twiny()
     ax2.xaxis.set_ticks_position('bottom')
@@ -313,7 +330,7 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
         l1_acc_value = subset['L1_Acc'].iloc[0] if not subset.empty else 0
         
         sns.heatmap(np.array([[l1_acc_value]]), annot=True, fmt=".1f", cmap="Blues", 
-                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_global_l1, vmax=vmax_global_l1, 
+                    cbar=False, linewidths=2, linecolor='white', vmin=0, vmax=100, 
                     ax=ax_l1, annot_kws={"size": 14, "weight": "bold"})
 
         ax_l1.set_xticks([])
@@ -340,6 +357,6 @@ def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni,
                 spine.set_linewidth(2)
                 spine.set_color('black')
 
-    fig.suptitle(f"{selected_uni.upper()} | {metric_label}\n(Budgets: L1={l1_pct_str}, L2={l2_pct_str})", 
+    fig.suptitle(f"L2 Ranking Accuracy\n(Budgets: L1={l1_pct_str}, L2={l2_pct_str})", 
                  fontsize=18, fontweight='bold', y=1.02)
     return fig
