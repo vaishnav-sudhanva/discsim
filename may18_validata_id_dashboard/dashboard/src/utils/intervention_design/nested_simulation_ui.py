@@ -561,13 +561,39 @@ def render_nested_simulation_ui():
                                 df_hm = df_ind[df_ind['L2_Budget_Pct'] == ui_l2_budget]
                                 best_combo = df_hm.loc[df_hm['V3_MAE_Acc'].idxmax()]
                                 
-                                st.success(f"**What is this?** The Ultimate Synergy Matrix. The rows show the Supervisor's fixed baseline strategy. The columns show the Auditor's flexible options at **{ui_l2_budget}** budget. "
-                                           f"Across all possible combinations shown above, the peak accuracy of **{best_combo['V3_MAE_Acc']:.1f}%** is achieved when the Supervisor uses a **{best_combo['L1_Budget_Pct']}** budget, "
-                                           f"and the Auditor checks **{int(best_combo['L2_C'])} clinics** by measuring **{int(best_combo['L2_K'])} kids** per clinic.")
+                                # st.success(f"**What is this?** The Ultimate Synergy Matrix. The rows show the Supervisor's fixed baseline strategy. The columns show the Auditor's flexible options at **{ui_l2_budget}** budget. "
+                                #            f"Across all possible combinations shown above, the peak accuracy of **{best_combo['V3_MAE_Acc']:.1f}%** is achieved when the Supervisor uses a **{best_combo['L1_Budget_Pct']}** budget, "
+                                #            f"and the Auditor checks **{int(best_combo['L2_C'])} clinics** by measuring **{int(best_combo['L2_K'])} kids** per clinic.")
                             except Exception as e: 
                                 pass
+                            with st.expander("How to Read This Heatmap & How It Is Calculated", expanded=True):
+                                 st.markdown("""
+                                 ### The Goal of This Visual
+                                 If an Independent Auditor (L2) is deployed, this heatmap shows them exactly how to spend their selected budget to maximize their success. It reveals the optimal **sampling strategy** needed to accurately rank and catch the worst-performing L1 Supervisors. 
 
-                st.markdown("<hr style='border: 2px dashed #ccc;'>", unsafe_allow_html=True)
+                                 Because the Auditor's success depends heavily on how much data the Supervisor collected first, this visual lets you look at various L1 Budget and pick the best L2 strategy for that specific situation.
+
+                                 ---
+
+                                 ### How to Read the Axes
+                                 * **The Y-Axis (Left side):** This represents the **L1 Supervisor's Sampling Strategy**. Each row is a different baseline. For example, "25C x 2K" means the Supervisor visited 25 Anganwadi Centers and measured 2 children per center. 
+                                 * **The X-Axis (Bottom):** This represents the **L2 Auditor's Execution Options** for the budget you selected in the filters. 
+                                     * The axis moves from **Left to Right**. 
+                                     * On the far left, the Auditor uses a **Low Depth / High Breadth** strategy (e.g., checking many Anganwadi Centers, but only measuring 1 kid per center). 
+                                     * As you move to the right, the strategy shifts to **High Depth / Low Breadth** (e.g., checking very few centers, but measuring almost every kid in those specific centers).
+                                 * **The Colors & Values:** The numbers inside the boxes represent the **Ranking Accuracy**. If a box says 90%, it means the auditor's sampling strategy successfully identified 9 out of the 10 truly worst-performing Supervisors. Dark green represents peak accuracy, while red warns of a highly inaccurate strategy.
+
+                                 ---
+
+                                 ### The Math: How We Calculate Ranking Accuracy
+                                 To determine if an Auditor's strategy actually works, the simulation mathematically compares the Auditor's findings against the absolute truth of the universe. Here is the step-by-step breakdown:
+
+                                 1. **The L2 Ranking List:** When the L2 Auditor measures their sample of children, we calculate the average difference between what the L1 Supervisor recorded and what the L2 Auditor found `MAE(L1 vs. L2)`. Supervisors with massive data gaps are flagged as "bad" by the Auditor, and ranked from worst to best.
+                                 2. **The Absolute Truth List:** Because this is a simulation, we know the exact biological reality of every child. We calculate the *true* difference between the L1 Supervisor's data and the real biological data `MAE(L1 vs. Real)`. This gives us the absolute, undeniable ranking of who the worst Supervisors truly are.
+                                 3. **The Overlap (The Final Score):** We compare the Auditor's list against the True list. If we are targeting the worst 30% of Supervisors, we check how many names appear on *both* lists. The percentage of correct matches becomes the Ranking Accuracy displayed in the heatmap.
+                                 """)
+
+                                 st.markdown("<hr style='border: 2px dashed #ccc;'>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     render_nested_simulation_ui()
