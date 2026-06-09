@@ -1,9 +1,11 @@
-How to Run the Intervention Design Dashboard Locally
-1. Clone the Repository
+Markdown
+# How to Run the Intervention Design Dashboard Locally
+
+### 1. Clone the Repository
 Download the code to your local machine and navigate directly to the dashboard folder.
 
-Bash
-git clone https://github.com/vaishnav-sudhanva/discsim.git
+```bash
+git clone [https://github.com/vaishnav-sudhanva/discsim.git](https://github.com/vaishnav-sudhanva/discsim.git)
 cd discsim/may18_validata_id_dashboard
 2. Create and Activate a Virtual Environment
 It is highly recommended to run this in a clean environment so it doesn't conflict with other Python projects on your computer.
