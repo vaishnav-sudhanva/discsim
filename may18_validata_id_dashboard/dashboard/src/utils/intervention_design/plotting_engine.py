@@ -65,7 +65,6 @@ def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_s
     plt.subplots_adjust(top=0.82)
     return fig
 
-# def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pct_str):
 # 🟢 Add total_clinics and total_kids arguments
 def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pct_str, total_clinics=25, total_kids=15):
     # ... (keep existing code) ...
@@ -78,7 +77,7 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
     agg_df['std_acc'] = agg_df['std_acc'].fillna(0)
     agg_df['ci95'] = 1.96 * (agg_df['std_acc'] / np.sqrt(agg_df['count']))
 
-# 🟢 Pass the dynamic total_clinics to the helper function
+    # 🟢 Pass the dynamic total_clinics to the helper function
     target_clinics = get_target_clinics(target_pct_str, total_clinics)
     
     agg_df['mean_acc_count'] = agg_df['mean_acc'] * (target_clinics / 100)
@@ -94,15 +93,24 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
         ax.fill_between(data['L1_Pct_Num'], data['mean_acc_count'] - data['ci_95_count'], 
                         data['mean_acc_count'] + data['ci_95_count'], color=uni_colors[uni], alpha=0.15)
 
-    # ax.set_xlabel('Percentage of Children Sampled per L0: Total 15 Children per L0', fontsize=14, fontweight='bold', labelpad=15)
-    # ax.set_ylabel(f'Top {target_pct_str} Worst L0 caught \n({target_clinics}/25 Target L0 in L1 Region)', fontsize=14, labelpad=15)
-# 🟢 Inject the dynamic variables into the labels
+    # 🟢 Inject the dynamic variables into the exact labels you requested
     ax.set_xlabel(f'Percentage of Children Sampled per L0: Total {total_kids} Children per L0', fontsize=14, fontweight='bold', labelpad=15)
-    ax.set_ylabel(f'Top {target_pct_str} Worst L0 caught \n({target_clinics}/{total_clinics} Target L0 in L1 Region)', fontsize=14, labelpad=15)
+    ax.set_ylabel(f'Top {target_pct_str} Worst L0 Caught \n({target_clinics}/{total_clinics} Target L0 in L1 Region)', fontsize=14, labelpad=15)
+    
+    # 🟢 X-Axis: Show both % and exact number in brackets
     x_ticks = sorted(agg_df['L1_Pct_Num'].unique())
     ax.set_xticks(x_ticks)
-    ax.set_xticklabels([f"{x}%" for x in x_ticks], fontsize=12)
+    # ax.set_xticklabels([f"{int(x)}%\n({round((x/100)*total_kids)} Kids)" for x in x_ticks], fontsize=12)
+    ax.set_xticklabels([f"{int(x)}%\n({int(round((x/100)*total_kids))} Kids)" for x in x_ticks], fontsize=12)
+    # 🟢 Y-Axis: Show both % and exact number in brackets (calculated based on target_clinics limit)
     ax.set_ylim(0, target_clinics + 0.5)
+    
+    # Creates 5 perfectly spaced ticks from 0 to the target_clinics limit (e.g., 0, 2, 4, 6, 8)
+    y_ticks = np.linspace(0, target_clinics, num=5) 
+    ax.set_yticks(y_ticks)
+    # ax.set_yticklabels([f"{int((y/target_clinics)*100)}%\n({int(y)} L0)" for y in y_ticks], fontsize=12)
+    ax.set_yticklabels([f"{int(round((y/target_clinics)*100))}%\n({int(y)} L0)" for y in y_ticks], fontsize=12)
+
     ax.grid(True, linestyle='--', alpha=0.5)
 
     for spine in ax.spines.values():
@@ -111,13 +119,15 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
 
     # ax.legend(title='Simulated Universe', bbox_to_anchor=(0.5, 1.15), loc='upper center', 
     #           ncol=min(5, len(selected_unis)), fontsize=11, framealpha=0.9, shadow=True)
+    
+    # 🟢 Original Title name kept, but gap fixed with pad=15 and tight_layout
     plt.title(f"L1 Ranking of L0 in each L1 Region: Height", 
-              fontsize=16, fontweight='bold', pad=75)
-    plt.subplots_adjust(top=0.82)
+              fontsize=16, fontweight='bold', pad=15)
+    
+    plt.tight_layout()
     return fig
 
-# def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budget_str, target_pct_str):
-# 🟢 Add total_clinics argument
+
 def plot_3_bd_optimization(df, metric_col, metric_label, selected_unis, l1_budget_str, target_pct_str, total_clinics=25):
     # ... (keep existing code until the axis labels) ...
     filtered_df = df[(df['Universe'].isin(selected_unis)) & (df['L1_Budget_Pct'] == l1_budget_str)].copy()
@@ -303,60 +313,205 @@ def plot_5_master_grid(df, metric_col, metric_label, l1_budget_str, target_pct_s
     plt.tight_layout() 
     return fig
 
-def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni, l1_pct_str, l2_pct_str):
-    vmin_global_l1, vmax_global_l1 = df[metric_col_l1].min(), df[metric_col_l1].max()
-    vmin_global_l2, vmax_global_l2 = df[metric_col_l2].min(), df[metric_col_l2].max()
 
-    df_hm = df[(df['Universe'] == selected_uni) & (df['L1_Budget_Pct'] == l1_pct_str) & (df['L2_Budget_Pct'] == l2_pct_str)].copy()
+
+
+
+# 🟢 Cleaned up signature: Removed metric_col_l1 and l1_pct_str entirely
+def plot_6_heatmap(df, metric_col_l2, metric_label, selected_uni, l2_pct_str):
+    
+    df_hm = df[(df['Universe'] == selected_uni) & (df['L2_Budget_Pct'] == l2_pct_str)].copy()
     if df_hm.empty: return None
 
-    agg_df = df_hm.groupby(['L1_Label', 'L2_Label', 'L2_K']).agg(
-        L1_Acc=(metric_col_l1, 'mean'), L2_Acc=(metric_col_l2, 'mean')
+    agg_df = df_hm.groupby(['L1_Budget_Pct', 'L1_Label', 'L2_Label', 'L2_K']).agg(
+        L2_Acc=(metric_col_l2, 'mean')
     ).reset_index()
 
-    l1_order = sorted(agg_df['L1_Label'].unique(), key=lambda x: int(x.split('C')[0]), reverse=True)
+    # Sort L1 Budgets logically (10% to 100%)
+    agg_df['L1_Budget_Int'] = agg_df['L1_Budget_Pct'].astype(str).str.replace('%', '').astype(float).astype(int)
+    
+    # Map the labels to their percentages so we can print both on the Y-Axis
+    sorted_l1 = agg_df[['L1_Budget_Int', 'L1_Budget_Pct', 'L1_Label']].drop_duplicates().sort_values('L1_Budget_Int')
+    l1_order = sorted_l1['L1_Label'].tolist()
+    l1_pct_map = dict(zip(sorted_l1['L1_Label'], sorted_l1['L1_Budget_Pct']))
 
     fig = plt.figure(figsize=(16, 12), dpi=100)
-    gs = gridspec.GridSpec(nrows=len(l1_order), ncols=2, width_ratios=[1, 6], wspace=0.1, hspace=0.8)
+    gs = gridspec.GridSpec(nrows=len(l1_order), ncols=2, width_ratios=[15, 0.5], wspace=0.05, hspace=0.8)
 
     sns.set_theme(style="white")
+    cbar_ax = fig.add_subplot(gs[:, 1])
 
     for i, l1_lbl in enumerate(l1_order):
-        ax_l1 = fig.add_subplot(gs[i, 0]) 
-        ax_l2 = fig.add_subplot(gs[i, 1]) 
-
+        ax_l2 = fig.add_subplot(gs[i, 0]) 
         subset = agg_df[agg_df['L1_Label'] == l1_lbl].sort_values(by='L2_K')
-
-        l1_acc_value = subset['L1_Acc'].iloc[0] if not subset.empty else 0
-        
-        sns.heatmap(np.array([[l1_acc_value]]), annot=True, fmt=".1f", cmap="Blues", 
-                    cbar=False, linewidths=2, linecolor='white', vmin=0, vmax=100, 
-                    ax=ax_l1, annot_kws={"size": 14, "weight": "bold"})
-
-        ax_l1.set_xticks([])
-        ax_l1.set_yticks([0.5])
-        ax_l1.set_yticklabels([l1_lbl], rotation=0, fontsize=14, fontweight='bold')
-        if i == 0: ax_l1.set_title("L1 Baseline Accuracy", fontsize=12, fontweight='bold', pad=10)
 
         heatmap_data_l2 = subset[['L2_Acc']].T 
         l2_labels = subset['L2_Label'].tolist()
 
         sns.heatmap(heatmap_data_l2, annot=True, fmt=".1f", cmap="RdYlGn", 
-                    cbar=False, linewidths=2, linecolor='white', vmin=vmin_global_l2, vmax=vmax_global_l2, 
+                    cbar=(i == 0), cbar_ax=cbar_ax if i == 0 else None, 
+                    linewidths=2, linecolor='white', vmin=0, vmax=100, 
                     ax=ax_l2, annot_kws={"size": 13, "weight": "bold"})
 
-        ax_l2.set_yticks([])
+        # 🟢 Format the Y-Axis to show exactly what you asked for!
+        pct_str = l1_pct_map[l1_lbl]
+        display_label = f"{l1_lbl}\n({pct_str} L1 Budget)"
+        
+        ax_l2.set_yticks([0.5])
+        ax_l2.set_yticklabels([display_label], rotation=0, fontsize=12, fontweight='bold')
+        # ax_l2.set_ylabel("L1 SS", fontsize=12, fontweight='bold', rotation=0, labelpad=35, va='center')
+        
         ax_l2.set_xticks(np.arange(len(l2_labels)) + 0.5)
         ax_l2.set_xticklabels(l2_labels, rotation=0, fontsize=12, fontweight='bold')
-        ax_l2.set_xlabel(r"Increasing L2 Depth $\longrightarrow$", fontsize=11, fontweight='bold', color='grey')
-        if i == 0: ax_l2.set_title("L2 Auditor Execution Options", fontsize=12, fontweight='bold', pad=10)
+        
+        if i == len(l1_order) - 1:
+            ax_l2.set_xlabel(r"Increasing L2 Depth $\longrightarrow$", fontsize=11, fontweight='bold', color='grey')
+        else:
+            ax_l2.set_xlabel("")
+            
+        if i == 0: 
+            ax_l2.set_title("L2 Sampling Strategy", fontsize=12, fontweight='bold', pad=10)
 
-        for ax in [ax_l1, ax_l2]:
-            for spine in ax.spines.values():
-                spine.set_visible(True)
-                spine.set_linewidth(2)
-                spine.set_color('black')
+        for spine in ax_l2.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(2)
+            spine.set_color('black')
 
-    fig.suptitle(f"L2 Ranking Accuracy\n(Budgets: L1={l1_pct_str}, L2={l2_pct_str})", 
+    for spine in cbar_ax.spines.values():
+        spine.set_visible(True)
+        spine.set_linewidth(1)
+        spine.set_color('black')
+
+    fig.suptitle(f"L2 Ranking Accuracy\n(Selected L2 Budget: {l2_pct_str})", 
                  fontsize=18, fontweight='bold', y=1.02)
     return fig
+
+# # 🟢 Maintained original signature so your UI code won't crash!
+# def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni, l1_pct_str, l2_pct_str):
+    
+#     # 🟢 Dropped the l1_pct_str filter so we get ALL 10 L1 budgets as rows
+#     df_hm = df[(df['Universe'] == selected_uni) & (df['L2_Budget_Pct'] == l2_pct_str)].copy()
+#     if df_hm.empty: return None
+
+#     agg_df = df_hm.groupby(['L1_Budget_Pct', 'L1_Label', 'L2_Label', 'L2_K']).agg(
+#         L1_Acc=(metric_col_l1, 'mean'), L2_Acc=(metric_col_l2, 'mean')
+#     ).reset_index()
+
+#     # Sort L1 Budgets so they display correctly from 10% down to 100%
+#     agg_df['L1_Budget_Int'] = agg_df['L1_Budget_Pct'].str.replace('%', '').astype(int)
+#     l1_order = agg_df[['L1_Budget_Int', 'L1_Label']].drop_duplicates().sort_values('L1_Budget_Int')['L1_Label'].tolist()
+
+#     fig = plt.figure(figsize=(16, 12), dpi=100)
+    
+#     # 🟢 Updated GridSpec: 1 Main Column for heatmaps, 1 Skinny Column for the Colorbar
+#     gs = gridspec.GridSpec(nrows=len(l1_order), ncols=2, width_ratios=[15, 0.5], wspace=0.05, hspace=0.8)
+
+#     sns.set_theme(style="white")
+    
+#     # 🟢 Create a single colorbar axis on the right side that spans all the rows
+#     cbar_ax = fig.add_subplot(gs[:, 1])
+
+#     for i, l1_lbl in enumerate(l1_order):
+#         # 🟢 ax_l1 is completely gone. Only ax_l2 remains!
+#         ax_l2 = fig.add_subplot(gs[i, 0]) 
+
+#         subset = agg_df[agg_df['L1_Label'] == l1_lbl].sort_values(by='L2_K')
+
+#         heatmap_data_l2 = subset[['L2_Acc']].T 
+#         l2_labels = subset['L2_Label'].tolist()
+
+#         # 🟢 Plot L2 Heatmap (Locked 0 to 100), linked to the colorbar on the right
+#         sns.heatmap(heatmap_data_l2, annot=True, fmt=".1f", cmap="RdYlGn", 
+#                     cbar=(i == 0), cbar_ax=cbar_ax if i == 0 else None, 
+#                     linewidths=2, linecolor='white', vmin=0, vmax=100, 
+#                     ax=ax_l2, annot_kws={"size": 13, "weight": "bold"})
+
+#         # 🟢 Correctly label the Y-Axis with the L1 SS (e.g., "25C x 2K")
+#         ax_l2.set_yticks([0.5])
+#         ax_l2.set_yticklabels([l1_lbl], rotation=0, fontsize=12, fontweight='bold')
+#         ax_l2.set_ylabel("L1 SS", fontsize=12, fontweight='bold', rotation=0, labelpad=25, va='center')
+        
+#         ax_l2.set_xticks(np.arange(len(l2_labels)) + 0.5)
+#         ax_l2.set_xticklabels(l2_labels, rotation=0, fontsize=12, fontweight='bold')
+        
+#         # Only put the X-axis label on the very bottom row
+#         if i == len(l1_order) - 1:
+#             ax_l2.set_xlabel(r"Increasing L2 Depth $\longrightarrow$", fontsize=11, fontweight='bold', color='grey')
+#         else:
+#             ax_l2.set_xlabel("")
+            
+#         if i == 0: 
+#             ax_l2.set_title("L2 Auditor Execution Options", fontsize=12, fontweight='bold', pad=10)
+
+#         for spine in ax_l2.spines.values():
+#             spine.set_visible(True)
+#             spine.set_linewidth(2)
+#             spine.set_color('black')
+
+#     # Make the colorbar outline clean
+#     for spine in cbar_ax.spines.values():
+#         spine.set_visible(True)
+#         spine.set_linewidth(1)
+#         spine.set_color('black')
+
+#     # 🟢 Simplified Title
+#     fig.suptitle(f"L2 Ranking Accuracy\n(Selected L2 Budget: {l2_pct_str})", 
+#                  fontsize=18, fontweight='bold', y=1.02)
+#     return fig
+# # def plot_6_heatmap(df, metric_col_l1, metric_col_l2, metric_label, selected_uni, l1_pct_str, l2_pct_str):
+# #     vmin_global_l1, vmax_global_l1 = df[metric_col_l1].min(), df[metric_col_l1].max()
+# #     vmin_global_l2, vmax_global_l2 = df[metric_col_l2].min(), df[metric_col_l2].max()
+
+# #     df_hm = df[(df['Universe'] == selected_uni) & (df['L1_Budget_Pct'] == l1_pct_str) & (df['L2_Budget_Pct'] == l2_pct_str)].copy()
+# #     if df_hm.empty: return None
+
+# #     agg_df = df_hm.groupby(['L1_Label', 'L2_Label', 'L2_K']).agg(
+# #         L1_Acc=(metric_col_l1, 'mean'), L2_Acc=(metric_col_l2, 'mean')
+# #     ).reset_index()
+
+# #     l1_order = sorted(agg_df['L1_Label'].unique(), key=lambda x: int(x.split('C')[0]), reverse=True)
+
+# #     fig = plt.figure(figsize=(16, 12), dpi=100)
+# #     gs = gridspec.GridSpec(nrows=len(l1_order), ncols=2, width_ratios=[1, 6], wspace=0.1, hspace=0.8)
+
+# #     sns.set_theme(style="white")
+
+# #     for i, l1_lbl in enumerate(l1_order):
+# #         ax_l1 = fig.add_subplot(gs[i, 0]) 
+# #         ax_l2 = fig.add_subplot(gs[i, 1]) 
+
+# #         subset = agg_df[agg_df['L1_Label'] == l1_lbl].sort_values(by='L2_K')
+
+# #         l1_acc_value = subset['L1_Acc'].iloc[0] if not subset.empty else 0
+        
+# #         sns.heatmap(np.array([[l1_acc_value]]), annot=True, fmt=".1f", cmap="Blues", 
+# #                     cbar=False, linewidths=2, linecolor='white', vmin=0, vmax=100, 
+# #                     ax=ax_l1, annot_kws={"size": 14, "weight": "bold"})
+
+# #         ax_l1.set_xticks([])
+#         ax_l1.set_yticks([0.5])
+#         ax_l1.set_yticklabels([l1_lbl], rotation=0, fontsize=14, fontweight='bold')
+#         if i == 0: ax_l1.set_title("L1 Baseline Accuracy", fontsize=12, fontweight='bold', pad=10)
+
+#         heatmap_data_l2 = subset[['L2_Acc']].T 
+#         l2_labels = subset['L2_Label'].tolist()
+
+#         sns.heatmap(heatmap_data_l2, annot=True, fmt=".1f", cmap="RdYlGn", 
+#                     cbar=False, linewidths=2, linecolor='white', vmin=vmin_global_l2, vmax=vmax_global_l2, 
+#                     ax=ax_l2, annot_kws={"size": 13, "weight": "bold"})
+
+#         ax_l2.set_yticks([])
+#         ax_l2.set_xticks(np.arange(len(l2_labels)) + 0.5)
+#         ax_l2.set_xticklabels(l2_labels, rotation=0, fontsize=12, fontweight='bold')
+#         ax_l2.set_xlabel(r"Increasing L2 Depth $\longrightarrow$", fontsize=11, fontweight='bold', color='grey')
+#         if i == 0: ax_l2.set_title("L2 Auditor Execution Options", fontsize=12, fontweight='bold', pad=10)
+
+#         for ax in [ax_l1, ax_l2]:
+#             for spine in ax.spines.values():
+#                 spine.set_visible(True)
+#                 spine.set_linewidth(2)
+#                 spine.set_color('black')
+
+#     fig.suptitle(f"L2 Ranking Accuracy\n(Budgets: L1={l1_pct_str}, L2={l2_pct_str})", 
+#                  fontsize=18, fontweight='bold', y=1.02)
+#     return fig

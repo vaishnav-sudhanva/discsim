@@ -23,11 +23,11 @@ PRESET_MAPPING = {
     # "Good L1, Bad L0": "Good_L0_Bad_L1_20260526_063458_Calc_1sims",
     # "Bad L1, Good L0": "Bad_L0_Good_L1_20260526_063931_Calc_1sims",
     # "Bad L1, Bad L0": "Bad_L0_Bad_L1_20260526_064358_Calc_1sims",
-     "Good L1 Good L0 V1": "Good_L0_Good_L1_20260603_173812_Step2_Iter_Eval_20260603_190640",
-        "Bad L1 Good L0 V1": "Good_L0_Bad_L1_20260603_221306_Step2_Iter_Eval_20260604_075210",
-    "Good L1 Bad L0 V1": "Bad_L0_Good_L1_20260604_001321_Step2_Iter_Eval_20260604_082126",
-      "Bad L1 Bad L0 V1": "Bad_L0_Bad_L1_20260604_021251_Step2_Iter_Eval_20260604_090856",
-      "Bad L1 Bad L0 V2": "Bad_L0_Bad_L1_20260606_225327_Step2_Iter_Eval_20260606_225408"
+    #  "Good L1 Good L0 V1": "Good_L0_Good_L1_20260603_173812_Step2_Iter_Eval_20260603_190640",
+    #     "Bad L1 Good L0 V1": "Good_L0_Bad_L1_20260603_221306_Step2_Iter_Eval_20260604_075210",
+    # "Good L1 Bad L0 V1": "Bad_L0_Good_L1_20260604_001321_Step2_Iter_Eval_20260604_082126",
+      "Bad L1 Bad L0 V1": "Bad_L0_Bad_L1_20260608_213154_Step2_Iter_Eval_20260608_213214",
+    #   "Bad L1 Bad L0 V2": "Bad_L0_Bad_L1_20260606_225327_Step2_Iter_Eval_20260606_225408"
 }
 
 def apply_preset():
@@ -365,8 +365,8 @@ def render_nested_simulation_ui():
         st.markdown("### Interactive Plot Filters")
         st.info("The data has been pre-calculated. Use these filters to instantly update the charts below.")
 
-        # 🟢 5 columns to include the Indicator Filter
-        filter_col1, filter_col2, filter_col3, filter_col4, filter_col5 = st.columns([2, 2, 2, 2, 1])
+        # 🟢 Reduced to 4 columns since we removed the L1 Budget filter!
+        filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([2, 2, 2, 1])
         budget_options = [f"{i}0%" for i in range(1, 11)]
         
         if 'Target_Percentile' in strategy_df.columns:
@@ -377,14 +377,12 @@ def render_nested_simulation_ui():
             default_target = "30%"
         
         with filter_col1:
-            ui_l1_budget = st.selectbox("L1 Budget Filter (Applies to all plots)", budget_options, index=5, help=TOOLTIPS.get("l1_budget", ""))
-        with filter_col2:
             ui_l2_budget = st.selectbox("L2 Budget Filter (Applies to Heatmap)", budget_options, index=3, help=TOOLTIPS.get("l2_budget", ""))
-        with filter_col3:
+        with filter_col2:
             ui_target_pct = st.selectbox("Target Catch Rate", target_options, index=target_options.index(default_target))
-        with filter_col4:
+        with filter_col3:
             ui_indicator = st.selectbox("Indicator", ["Height", "Weight", "Both"], index=0)
-        with filter_col5:
+        with filter_col4:
             st.markdown("<br>", unsafe_allow_html=True)
             csv_data = strategy_df.to_csv(index=False).encode('utf-8')
             st.download_button(label="Download Data", data=csv_data, file_name='simulation_results.csv', mime='text/csv', use_container_width=True)
@@ -432,10 +430,10 @@ def render_nested_simulation_ui():
         elif ui_indicator.lower() == "weight": target_inds = ["Weight"]
         else: target_inds = ["Height"]
 
-        # Math for descriptions
-        total_kids_per_l1 = mem_p.get("n_L0s_per_L1", 25) * mem_p.get("n_children_per_L0", 15)
-        l1_pct_float = int(ui_l1_budget.replace("%", "")) / 100.0
-        actual_l1_budget = int(total_kids_per_l1 * l1_pct_float)
+        # # Math for descriptions
+        # total_kids_per_l1 = mem_p.get("n_L0s_per_L1", 25) * mem_p.get("n_children_per_L0", 15)
+        # l1_pct_float = int(ui_l1_budget.replace("%", "")) / 100.0
+        # actual_l1_budget = int(total_kids_per_l1 * l1_pct_float)
         
         # 🟢 Filter the dataframe to a single target threshold BEFORE plotting
         if 'Target_Percentile' in strategy_df.columns:
@@ -476,15 +474,55 @@ def render_nested_simulation_ui():
                             st.info(f"**What is this?** This plot displays the 'God-Mode' absolute baseline. It shows the maximum physical capability of a Supervisor (L1) to catch the worst **{ui_target_pct}** of fraud. As budgets increase, the variance (shaded area) shrinks. The absolute peak accuracy achieved in this simulation is **{max_acc:.1f}%**.")
                         except: pass
                     
+                
                 elif plot_name == "L1 Sampling Strategy":
                     st.markdown(f"#### Plot 1: L1 Sampling Strategy (Targeting Top {ui_target_pct})")
+            
+            # 1. Draw the Plot
                     fig2 = plotting_engine.plot_2_intra_regional(df_ind, 'V2_MAE_Acc', 'V2 MAE Clinic Score', current_uni, ui_target_pct, total_clinics, total_kids)
+            
                     if fig2: 
                         st.pyplot(fig2)
+                
+                # 2. Dynamic Optimal Strategy Calculation
+                # Find the lowest sample size that hits 85% accuracy, or max possible if it never hits 85%
                         try:
-                            curr_acc = df_ind[df_ind['L1_Budget_Pct'] == ui_l1_budget]['V2_MAE_Acc'].max()
-                            st.info(f"**What is this?** This evaluates how well the Supervisor (L1) can rank their *own* clinics internally. Based on your selected **{ui_l1_budget} L1 Budget**, the supervisor successfully identifies **{curr_acc:.1f}%** of the truly corrupt clinics.")
-                        except: pass
+                            uni_data = df_ind[df_ind['Universe'].isin(current_uni)].groupby('L1_Pct_Num')['V2_MAE_Acc'].mean().reset_index()
+                            uni_data = uni_data.sort_values('L1_Pct_Num')
+                    
+                            meets_target = uni_data[uni_data['V2_MAE_Acc'] >= 85.0]
+                            if not meets_target.empty:
+                                opt_pct = meets_target.iloc[0]['L1_Pct_Num']
+                                opt_acc = meets_target.iloc[0]['V2_MAE_Acc']
+                            else:
+                                opt_pct = uni_data.loc[uni_data['V2_MAE_Acc'].idxmax()]['L1_Pct_Num']
+                                opt_acc = uni_data['V2_MAE_Acc'].max()
+                        
+                            opt_kids = int(round((opt_pct / 100) * total_kids))
+                    
+                    # Print the Dynamic Recommendation
+                            st.success(f"### Recommended L1 Strategy \n"
+                                       f"To accurately rank L0 Anganwadi Centers, the L1 Supervisor should sample **{int(opt_pct)}% ({opt_kids} children)** per L0. "
+                                       f"This guarantees an average accuracy of **{opt_acc:.1f}%** in catching the worst offenders. Sampling more children beyond this point yields diminishing returns.")
+                        except Exception as e:
+                            pass # Failsafe in case data shape changes
+
+                # 3. Detailed Explanation & Calculation Steps
+                        with st.expander("How to Interpret This Plot & Calculations", expanded=True):
+                            st.markdown(f"""
+                            This plot answers the critical operational question: *"How many children does a Supervisor (L1) need to sample per Anganwadi Center (L0) to accurately identify the worst-performing Anganwadi (The Anganwadi that produce very high false reports of child health) in their region?"*
+                    
+                            * **The X-Axis (Bottom):** Shows the L1 Supervisor's sampling strategy: The percentage (and exact number) of children sampled per L0.
+                            * **The Y-Axis (Left):** Shows the Ranking Accuracy: The percentage of the truly "Worst" L0 Centers that the L1 Supervisor successfully caught at that sample size.
+                    
+                            **How We Calculated This (Step-by-Step):**
+                            1. **Simulate the Audit:** We let the Supervisor (L1) sample a given percentage (X) of children from each Anganwadi Center (L0).
+                            2. **Supervisor's Perceived Ranking:** For that specific sample, we calculate the Mean Absolute Error between the L0 Centers reported data and the supervisor's measurement `MAE(L0 - L1)`. A large MAE means the L0's data is highly distorted. We rank this list of L0 in descending order (worst offenders at the top).
+                            3. **The "True" Ranking:** We calculate the population's true error `MAE(Real - L0)` using the Real Simulated biological data, and arrange the L0 in descending order. This is our absolute ground truth of who the worst offenders are.
+                            4. **Evaluate Accuracy (Overlap):** We now have two lists. We apply the target filter (e.g., Top {ui_target_pct}). We look at the worst {ui_target_pct} of L0 from *both* lists and check how many overlap. 
+                            5. **Final Score:** If 9 out of 10 targeted L0 match between the Supervisor's list and the True list, we determine the ranking accuracy for that sample size is 90%.
+                            """)
+
 
                 elif plot_name == "3. Breadth/Depth Optimization":
                     st.markdown(f"#### Plot 3: Breadth/Depth Optimization (L1 Budget: {ui_l1_budget})")
@@ -513,16 +551,21 @@ def render_nested_simulation_ui():
                         st.info(f"**What is this?** A multi-verse grid view showing how the Independent Auditor (L2) should optimize their *own* breadth (how many clinics they spot-check) given that the Supervisor below them already used a fixed **{ui_l1_budget}** sampling strategy.")
 
                 elif plot_name == "L2 Sampling Strategy":
-                    st.markdown(f"#### Plot 2: L2 Strategy Heatmap (L1: {ui_l1_budget} | L2: {ui_l2_budget})")
+                    st.markdown(f"#### Plot 2: L2 Strategy Heatmap (L2 Budget Fixed at: {ui_l2_budget})")
                     if len(current_uni) > 0:
-                        fig6 = plotting_engine.plot_6_heatmap(df_ind, 'V2_MAE_Acc', 'V1_MAE_Acc', 'God-Mode MAE Comparison', current_uni[0], ui_l1_budget, ui_l2_budget)
+                        fig6 = plotting_engine.plot_6_heatmap(df_ind, 'V3_MAE_Acc', 'God-Mode MAE Comparison', current_uni[0], ui_l2_budget)
                         if fig6: 
                             st.pyplot(fig6)
                             try:
-                                df_hm = df_ind[(df_ind['L1_Budget_Pct'] == ui_l1_budget) & (df_ind['L2_Budget_Pct'] == ui_l2_budget)]
-                                best_l2 = df_hm.loc[df_hm['V3_MAE_Acc'].idxmax()]
-                                st.success(f"**What is this?** The Ultimate Synergy Matrix. The blue cells (left) show the Supervisor's baseline capability at **{ui_l1_budget}**. The green/red cells (right) show the Auditor's final success rate at **{ui_l2_budget}**. For this combo, the optimal policy mandate is for L2 to audit **{int(best_l2['L2_C'])} clinics** and measure **{int(best_l2['L2_K'])} kids** per clinic, peaking at **{best_l2['V3_MAE_Acc']:.1f}%** accuracy.")
-                            except: pass
+                                # Scan the entire heatmap (all L1s) to find the absolute peak accuracy for this L2 budget
+                                df_hm = df_ind[df_ind['L2_Budget_Pct'] == ui_l2_budget]
+                                best_combo = df_hm.loc[df_hm['V3_MAE_Acc'].idxmax()]
+                                
+                                st.success(f"**What is this?** The Ultimate Synergy Matrix. The rows show the Supervisor's fixed baseline strategy. The columns show the Auditor's flexible options at **{ui_l2_budget}** budget. "
+                                           f"Across all possible combinations shown above, the peak accuracy of **{best_combo['V3_MAE_Acc']:.1f}%** is achieved when the Supervisor uses a **{best_combo['L1_Budget_Pct']}** budget, "
+                                           f"and the Auditor checks **{int(best_combo['L2_C'])} clinics** by measuring **{int(best_combo['L2_K'])} kids** per clinic.")
+                            except Exception as e: 
+                                pass
 
                 st.markdown("<hr style='border: 2px dashed #ccc;'>", unsafe_allow_html=True)
 

@@ -104,10 +104,17 @@ def run_tracer_engine(df_pop, task_id, output_dir, n_simulations=1, indicators=[
         
         for l1_pct in PERCENTAGES:
             l1_budget = int(np.round(TOTAL_L1_KIDS * l1_pct))
-            l1_strats = generate_dynamic_strategies(l1_budget, N_L0S, N_KIDS, tolerance=0.01, max_qty=10)
+            
+            # 🟢 L1 STRATEGY LOCKED: L1 must visit all Anganwadi Centers (N_L0S)
+            l1_c = N_L0S
+            l1_k = max(1, int(np.round(l1_budget / l1_c)))
+            
+            # We assign exactly ONE valid strategy for L1 per budget
+            l1_strats = [(l1_c, l1_k)]
             
             for l1_c, l1_k in l1_strats:
                 for sim_id in range(n_simulations):
+                    
                     np.random.seed(sim_id)
                     
                     # --- L1 CLINIC SAMPLING (Instant Tensor Slice) ---
