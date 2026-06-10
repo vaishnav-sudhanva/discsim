@@ -12,7 +12,18 @@ API_BASE_URL = "http://localhost:8005"
 # ==============================================================================
 # 1. DIRECTORY SETUP & PRESET CONFIGURATIONS
 # ==============================================================================
-base_output_dir = r"C:\Users\CEGIS\Documents\GitHub\discsim\may18_validata_id_dashboard\outputs"
+# ==============================================================================
+# 1. DIRECTORY SETUP & PRESET CONFIGURATIONS
+# ==============================================================================
+# 🟢 Dynamically climb up the folder tree to find the project root
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))  # intervention_design
+UTILS_DIR = os.path.dirname(CURRENT_DIR)                  # utils
+SRC_DIR = os.path.dirname(UTILS_DIR)                      # src
+DASHBOARD_DIR = os.path.dirname(SRC_DIR)                  # dashboard
+PROJECT_ROOT = os.path.dirname(DASHBOARD_DIR)             # may18_validata_id_dashboard
+
+# Now safely build paths that work on any Windows, Mac, or Linux computer!
+base_output_dir = os.path.join(PROJECT_ROOT, "outputs")
 preset_output_dir = os.path.join(base_output_dir, "Precalculated_Presets")
 MASTER_REGISTRY_PATH = os.path.join(base_output_dir, "simulation_master_registry.csv")
 
