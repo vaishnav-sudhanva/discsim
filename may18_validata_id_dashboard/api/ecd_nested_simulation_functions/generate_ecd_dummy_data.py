@@ -4,7 +4,7 @@ from scipy.stats import norm
 from matplotlib import pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
-from disc_score import discrepancy_score
+from .disc_score import discrepancy_score
 from . import ecd_anthro_score_calc
 
 def generate_real_measurements(

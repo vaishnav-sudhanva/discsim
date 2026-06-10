@@ -8,10 +8,10 @@ from fastapi import FastAPI, BackgroundTasks  # Core asynchronous web router fra
 from pydantic import BaseModel  # Strict validation structures for typed input blocks
 from typing import Dict, Any, List  # Explicit type annotations for clean system compilation
 
-# Pull in our structural decoupled backend steps
-import data_generator  # Step 1: Population Creator
-import metrics_calculator  # Step 2: Combinatorial Matrix Engine
-import analytics_ranker  # Step 3: Lightweight Rank Summary Engine
+# 🟢 CORRECTED: Use absolute imports starting from 'services'
+from services import data_generator  # Step 1: Population Creator
+from services import metrics_calculator  # Step 2: Combinatorial Matrix Engine
+from services import analytics_ranker  # Step 3: Lightweight Rank Summary Engine
 
 # Initialize the application instance once
 app = FastAPI(title="Nested Simulation Engine API")

@@ -13,10 +13,10 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.append(CURRENT_DIR)
 
-# Dynamically pull in our clean, decoupled modular pipeline step engines
-import data_generator as step1
-import metrics_calculator as step2
-import analytics_ranker as step3
+# 🟢 CORRECTED: Removed the sys.path hack and used absolute imports
+from services import data_generator as step1
+from services import metrics_calculator as step2
+from services import analytics_ranker as step3
 
 def execute_full_pipeline(user_params=None, run_name="Custom_Run", n_simulations=5):
     """

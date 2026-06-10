@@ -1,3 +1,25 @@
+# import os
+# import sys
+# import numpy as np
+# import pandas as pd
+
+# # ==============================================================================
+# # 1. DYNAMIC PATH RESOLUTION
+# # ==============================================================================
+# CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+# API_DIR = os.path.dirname(CURRENT_DIR)
+# WHO_DIR = os.path.join(CURRENT_DIR, "who")  # dynamically finds 'who' next to this script
+
+# # We add API_DIR to path so Python sees the folder as a package
+# if API_DIR not in sys.path: 
+#     sys.path.append(API_DIR)
+
+# # FIX: Also explicitly add the ecd_nested_simulation_functions directory so it can find disc_score.py
+# ECD_DIR = os.path.join(API_DIR, "ecd_nested_simulation_functions")
+# if ECD_DIR not in sys.path:
+#     sys.path.append(ECD_DIR)
+
+# from ecd_nested_simulation_functions import generate_ecd_dummy_data
 import os
 import sys
 import numpy as np
@@ -6,19 +28,13 @@ import pandas as pd
 # ==============================================================================
 # 1. DYNAMIC PATH RESOLUTION
 # ==============================================================================
+# Safely get the directory where data_generator.py lives (the 'services' folder)
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-API_DIR = os.path.dirname(CURRENT_DIR)
-WHO_DIR = os.path.join(CURRENT_DIR, "who")  # dynamically finds 'who' next to this script
 
-# We add API_DIR to path so Python sees the folder as a package
-if API_DIR not in sys.path: 
-    sys.path.append(API_DIR)
+# Safely point to the WHO data folder located next to this script
+WHO_DIR = os.path.join(CURRENT_DIR, "who")
 
-# FIX: Also explicitly add the ecd_nested_simulation_functions directory so it can find disc_score.py
-ECD_DIR = os.path.join(API_DIR, "ecd_nested_simulation_functions")
-if ECD_DIR not in sys.path:
-    sys.path.append(ECD_DIR)
-
+# 🟢 Clean, absolute import (Works perfectly because Uvicorn runs from 'api')
 from ecd_nested_simulation_functions import generate_ecd_dummy_data
 
 def build_universe(params, task_id, output_dir) -> tuple[str, pd.DataFrame]:

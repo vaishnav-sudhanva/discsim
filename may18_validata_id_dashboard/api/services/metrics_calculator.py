@@ -3,11 +3,6 @@ import numpy as np  # Handles high-performance numerical array operations and ab
 import pandas as pd  # Core data manipulation library used to group, sample, and merge datasets
 from scipy.stats import sem  # Specifically imported to compute the Standard Error of the Mean (SE)
 
-
-import os
-import numpy as np
-import pandas as pd
-
 def compute_error_metrics(tensor_a, tensor_b, calc_axis):
     """
     V4 Tensor Helper: Calculates Mean Absolute Error (MAE) instantly across 3D array axes.
@@ -114,7 +109,7 @@ def run_tracer_engine(df_pop, task_id, output_dir, n_simulations=1, indicators=[
             
             for l1_c, l1_k in l1_strats:
                 for sim_id in range(n_simulations):
-                    
+
                     np.random.seed(sim_id)
                     
                     # --- L1 CLINIC SAMPLING (Instant Tensor Slice) ---
