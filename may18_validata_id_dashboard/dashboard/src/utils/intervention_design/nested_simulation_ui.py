@@ -586,7 +586,7 @@ def render_nested_simulation_ui():
 
                                  ---
 
-                                 ### How to Read the Axes
+                                 ### How to Read the Axis
                                  * **The Y-Axis (Left side):** This represents the **L1 Supervisor's Sampling Strategy**. Each row is a different baseline. For example, "25C x 2K" means the Supervisor visited 25 Anganwadi Centers and measured 2 children per center. 
                                  * **The X-Axis (Bottom):** This represents the **L2 Auditor's Execution Options** for the budget you selected in the filters. 
                                      * The axis moves from **Left to Right**. 
