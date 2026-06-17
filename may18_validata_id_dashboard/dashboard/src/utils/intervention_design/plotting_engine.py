@@ -60,7 +60,11 @@ def plot_1_sensitivity(df, metric_col, metric_label, selected_unis, target_pct_s
 
     ax.legend(title='Simulated Universe', bbox_to_anchor=(0.5, 1.15), loc='upper center', 
               ncol=min(5, len(selected_unis)), fontsize=11, framealpha=0.9, shadow=True)
-    plt.title(f"L1 Ranking of L1 Regions: Height Using [{metric_label}]", 
+              
+    # 🟢 Extract the indicator dynamically (Height or Weight)
+    ind_name = df['Indicator'].iloc[0] if 'Indicator' in df.columns and not df.empty else "Indicator"
+    
+    plt.title(f"L1 Ranking of L1 Regions: {ind_name} Using [{metric_label}]", 
               fontsize=16, fontweight='bold', pad=75)
     plt.subplots_adjust(top=0.82)
     return fig
@@ -121,7 +125,11 @@ def plot_2_intra_regional(df, metric_col, metric_label, selected_unis, target_pc
     #           ncol=min(5, len(selected_unis)), fontsize=11, framealpha=0.9, shadow=True)
     
     # 🟢 Original Title name kept, but gap fixed with pad=15 and tight_layout
-    plt.title(f"L1 Ranking of L0 in each L1 Region: Height", 
+    # 🟢 Extract the indicator dynamically (Height or Weight)
+    ind_name = df['Indicator'].iloc[0] if 'Indicator' in df.columns and not df.empty else "Indicator"
+
+    # 🟢 Original Title name kept, but gap fixed with pad=15 and tight_layout
+    plt.title(f"L1 Ranking of L0 in each L1 Region: {ind_name}", 
               fontsize=16, fontweight='bold', pad=15)
     
     plt.tight_layout()

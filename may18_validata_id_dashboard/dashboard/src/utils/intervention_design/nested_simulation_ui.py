@@ -248,11 +248,37 @@ def render_nested_simulation_ui():
         p["mean_percent_copy"] = st.slider("Percentage of Data Copied by L1 ", 0.0, 100.0, key="mean_percent_copy", help=TOOLTIPS.get("mean_percent_copy", ""))
         p["error_sd_height_all_L0s"] = st.slider("Measurement Error (Cm/Kg)", 0.0, 3.0, key="error_sd_height_all_L0s", help=TOOLTIPS.get("error_sd_height_all_L0s", ""))
         p["error_sd_weight_all_L0s"] = p["error_sd_height_all_L0s"] * 0.1
+        p["n_simulations"] = st.slider("Number of Simulations", min_value=1, max_value=30, value=5, key="n_simulations_used", help=TOOLTIPS.get("n_simulations", ""))
+        
 
+    # with dist_col2:
+    #     p["mean_percent_under_reporting_stunting"] = st.slider("Percentage of Under Reporting Stunting (Height) in Each L0", 0.0, 100.0, key="mean_percent_under_reporting_stunting", help=TOOLTIPS.get("mean_percent_under_reporting_stunting", ""))
+    #     p["mean_percent_under_reporting_underweight"] = st.slider("Percentage of Under reporting Underweight (Weight) in Each L0", 0.0, 100.0, key="mean_percent_under_reporting_underweight", help=TOOLTIPS.get("mean_percent_under_reporting_underweight", ""))
     with dist_col2:
-        p["mean_percent_under_reporting_stunting"] = st.slider("Percentage of Under Reporting Stunting (Height) in Each L0", 0.0, 100.0, key="mean_percent_under_reporting_stunting", help=TOOLTIPS.get("mean_percent_under_reporting_stunting", ""))
-        p["mean_percent_under_reporting_underweight"] = st.slider("Percentage of Under reporting Underweight (Weight) in Each L0", 0.0, 100.0, key="mean_percent_under_reporting_underweight", help=TOOLTIPS.get("mean_percent_under_reporting_underweight", ""))
-   
+        # 1. Dynamically calculate the maximum allowed under-reporting
+        # (We use a fallback of 1.0 just in case the user sets the population to 0.0, which would crash Streamlit)
+        max_stunting = float(p["real_percent_stunting"]) if float(p["real_percent_stunting"]) > 0.0 else 1.0
+        max_underweight = float(p["real_percent_underweight"]) if float(p["real_percent_underweight"]) > 0.0 else 1.0
+
+        p["mean_percent_under_reporting_stunting"] = st.slider(
+            "Percentage of Under Reporting Stunting (Height) in Each L0", 
+            min_value=0.0, 
+            max_value=max_stunting, 
+            key="mean_percent_under_reporting_stunting", 
+            help=TOOLTIPS.get("mean_percent_under_reporting_stunting", "")
+        )
+        p["mean_percent_under_reporting_underweight"] = st.slider(
+            "Percentage of Under reporting Underweight (Weight) in Each L0", 
+            min_value=0.0, 
+            max_value=max_underweight, 
+            key="mean_percent_under_reporting_underweight", 
+            help=TOOLTIPS.get("mean_percent_under_reporting_underweight", "")
+        )
+        
+        
+        p["mean_time_lag_L1"] = st.slider("Number of Days Before L1 Samples", min_value=0, max_value=30, value=15, key="mean_time_lag_L1", help=TOOLTIPS.get("time_lag", ""))
+        p["mean_time_lag_L2"] = st.slider("Number of Days Before L2 Samples", min_value=0, max_value=30, value=30, key="mean_time_lag_L2", help=TOOLTIPS.get("time_lag", ""))
+        
     # ==============================================================================
     # 5. ADVANCED SIMULATION EXPANSER PARAMETERS
     # ==============================================================================
@@ -265,22 +291,20 @@ def render_nested_simulation_ui():
             p["sd_across_units_percent_under_reporting_underweight"] = st.number_input("SD of Under Reporting Underweight (Weight) Across L1", key="sd_across_units_percent_under_reporting_underweight", help=TOOLTIPS.get("sd_across", ""))
             p["sd_within_units_percent_under_reporting_stunting"] = st.number_input("SD of Under Reporting Stunting (Height) Within L1", key="sd_within_units_percent_under_reporting_stunting", help=TOOLTIPS.get("sd_within", ""))
             p["sd_within_units_percent_under_reporting_underweight"] = st.number_input("SD of Under Reporting Underweight (Weight) Within L1", key="sd_within_units_percent_under_reporting_underweight", help=TOOLTIPS.get("sd_within", ""))
-            p["sd_across_units_bunch_factor_haz"] = st.number_input("SD Across L1 Bunch Factor (HAZ)", key="sd_across_units_bunch_factor_haz", help=TOOLTIPS.get("bunch_factor", ""))
-            p["sd_across_units_bunch_factor_waz"] = st.number_input("SD Across L1 Bunch Factor (WAZ)", key="sd_across_units_bunch_factor_waz", help=TOOLTIPS.get("bunch_factor", ""))
-
-        with exp_col2:
-            st.markdown("**Misc Variances & Lags**")
-            p["sd_within_units_bunch_factor_haz"] = st.number_input("SD Within L1 Bunch Factor (HAZ)", key="sd_within_units_bunch_factor_haz", help=TOOLTIPS.get("bunch_factor", ""))
-            p["sd_within_units_bunch_factor_waz"] = st.number_input("SD Within L1 Bunch Factor (WAZ)", key="sd_within_units_bunch_factor_waz", help=TOOLTIPS.get("bunch_factor", ""))
             p["sd_percent_copy"] = st.number_input("SD Data Copy By L1", key="sd_percent_copy", help=TOOLTIPS.get("sd_copy", ""))
             p["sd_collusion_index"] = st.number_input("SD Collusion Between (L0 & L1)", key="sd_collusion_index", help=TOOLTIPS.get("sd_collusion", ""))
-            p["mean_time_lag_L1"] = st.number_input("Number of Days Before L1 Samples", key="mean_time_lag_L1", step=1, help=TOOLTIPS.get("time_lag", ""))
-            p["mean_time_lag_L2"] = st.number_input("Number of Days Before L2 Samples", key="mean_time_lag_L2", step=1, help=TOOLTIPS.get("time_lag", ""))
+           
+        with exp_col2:
+            st.markdown("**Bunching Variance**")
+            p["mean_bunch_factor_haz"] = st.number_input("Mean Bunching Factor (Height/HAZ)", min_value=0.0, max_value=1.0, value=0.0, step=0.01, key="mean_bunch_factor_haz", help=TOOLTIPS.get("mean_bunch_factor", "The probability (0.0 to 1.0) that an Anganwadi worker artificially rounds height data to avoid crossing severe malnutrition thresholds."))
+            p["mean_bunch_factor_waz"] = st.number_input("Mean Bunching Factor (Weight/WAZ)", min_value=0.0, max_value=1.0, value=0.0, step=0.01, key="mean_bunch_factor_waz", help=TOOLTIPS.get("mean_bunch_factor", "The probability (0.0 to 1.0) that an Anganwadi worker artificially rounds weight data to avoid crossing severe malnutrition thresholds."))
+            p["sd_within_units_bunch_factor_haz"] = st.number_input("SD Within L1 Bunch Factor (HAZ)", key="sd_within_units_bunch_factor_haz", help=TOOLTIPS.get("bunch_factor", ""))
+            p["sd_within_units_bunch_factor_waz"] = st.number_input("SD Within L1 Bunch Factor (WAZ)", key="sd_within_units_bunch_factor_waz", help=TOOLTIPS.get("bunch_factor", ""))
+            p["sd_across_units_bunch_factor_haz"] = st.number_input("SD Across L1 Bunch Factor (HAZ)", key="sd_across_units_bunch_factor_haz", help=TOOLTIPS.get("bunch_factor", ""))
+            p["sd_across_units_bunch_factor_waz"] = st.number_input("SD Across L1 Bunch Factor (WAZ)", key="sd_across_units_bunch_factor_waz", help=TOOLTIPS.get("bunch_factor", ""))
             
-            st.markdown("---")
-            st.markdown("**Engine Configuration**")
-            p["n_simulations"] = st.number_input("Number of Simulations", min_value=1, max_value=30, key="n_simulations_used", step=1, help=TOOLTIPS.get("n_simulations", "")) 
-        
+            
+            
     # ==============================================================================
     # 6. DUAL RUN INTERACTIVE PIPELINE
     # ==============================================================================
@@ -361,7 +385,9 @@ def render_nested_simulation_ui():
     # 7. RENDER FILTERS AND PLOTS FROM SCENARIO RESULTS
     # ==============================================================================
     if st.session_state["simulation_results"] is not None:
+        # strategy_df = st.session_state["simulation_results"]
         strategy_df = st.session_state["simulation_results"]
+        # st.warning(f"Available Indicators: {strategy_df['Indicator'].unique()}") # 🟢 ADD THIS LINE
         
         # 🟢 Cast integers instantly before we render, right out of the session state
         if 'L1_Pct_Num' not in strategy_df.columns:
