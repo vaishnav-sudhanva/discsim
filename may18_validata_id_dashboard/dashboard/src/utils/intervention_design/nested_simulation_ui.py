@@ -248,7 +248,7 @@ def render_nested_simulation_ui():
         p["mean_percent_copy"] = st.slider("Percentage of Data Copied by L1 ", 0.0, 100.0, key="mean_percent_copy", help=TOOLTIPS.get("mean_percent_copy", ""))
         p["error_sd_height_all_L0s"] = st.slider("Measurement Error (Cm/Kg)", 0.0, 3.0, key="error_sd_height_all_L0s", help=TOOLTIPS.get("error_sd_height_all_L0s", ""))
         p["error_sd_weight_all_L0s"] = p["error_sd_height_all_L0s"] * 0.1
-        p["n_simulations"] = st.slider("Number of Simulations", min_value=1, max_value=30, value=5, key="n_simulations_used", help=TOOLTIPS.get("n_simulations", ""))
+        p["n_simulations"] = st.slider("Number of Simulations", min_value=1, max_value=30, key="n_simulations_used", help=TOOLTIPS.get("n_simulations", ""))
         
 
     # with dist_col2:
@@ -286,7 +286,7 @@ def render_nested_simulation_ui():
         exp_col1, exp_col2 = st.columns(2)
         
         with exp_col1:
-            st.markdown("**Fraud Variances (SD)**")
+            st.markdown("**Distortion Parameter Variances (SD)**")
             p["sd_across_units_percent_under_reporting_stunting"] = st.number_input("SD of Under Reporting Stunting (Height) Across L1", key="sd_across_units_percent_under_reporting_stunting", help=TOOLTIPS.get("sd_across", ""))
             p["sd_across_units_percent_under_reporting_underweight"] = st.number_input("SD of Under Reporting Underweight (Weight) Across L1", key="sd_across_units_percent_under_reporting_underweight", help=TOOLTIPS.get("sd_across", ""))
             p["sd_within_units_percent_under_reporting_stunting"] = st.number_input("SD of Under Reporting Stunting (Height) Within L1", key="sd_within_units_percent_under_reporting_stunting", help=TOOLTIPS.get("sd_within", ""))
@@ -537,14 +537,14 @@ def render_nested_simulation_ui():
                             opt_kids = int(round((opt_pct / 100) * total_kids))
                     
                     # Print the Dynamic Recommendation
-                            st.success(f"### Recommended L1 Strategy \n"
-                                       f"To accurately rank L0 Anganwadi Centers, the L1 Supervisor should sample **{int(opt_pct)}% ({opt_kids} children)** per L0. "
-                                       f"This guarantees an average accuracy of **{opt_acc:.1f}%** in catching the worst offenders. Sampling more children beyond this point yields diminishing returns.")
+                            # st.success(f"### Recommended L1 Strategy \n"
+                            #            f"To accurately rank L0 Anganwadi Centers, the L1 Supervisor should sample **{int(opt_pct)}% ({opt_kids} children)** per L0. "
+                            #            f"This guarantees an average accuracy of **{opt_acc:.1f}%** in catching the worst offenders. Sampling more children beyond this point yields diminishing returns.")
                         except Exception as e:
                             pass # Failsafe in case data shape changes
 
                 # 3. Detailed Explanation & Calculation Steps
-                        with st.expander("How to Interpret This Plot & Calculations", expanded=True):
+                        with st.expander("How to Interpret The Plot & Calculations", expanded=True):
                             st.markdown(f"""
                             This plot answers the critical operational question: *"How many children does a Supervisor (L1) need to sample per Anganwadi Center (L0) to accurately identify the worst-performing Anganwadi (The Anganwadi that produce very high false reports of child health) in their region?"*
                     
@@ -556,35 +556,34 @@ def render_nested_simulation_ui():
                             2. **Supervisor's Perceived Ranking:** For that specific sample, we calculate the Mean Absolute Error between the L0 Centers reported data and the supervisor's measurement `MAE(L0 - L1)`. A large MAE means the L0's data is highly distorted. We rank this list of L0 in descending order (worst offenders at the top).
                             3. **The "True" Ranking:** We calculate the population's true error `MAE(Real - L0)` using the Real Simulated biological data, and arrange the L0 in descending order. This is our absolute ground truth of who the worst offenders are.
                             4. **Evaluate Accuracy (Overlap):** We now have two lists. We apply the target filter (e.g., Top {ui_target_pct}). We look at the worst {ui_target_pct} of L0 from *both* lists and check how many overlap. 
-                            5. **Final Score:** If 9 out of 10 targeted L0 match between the Supervisor's list and the True list, we determine the ranking accuracy for that sample size is 90%.
                             """)
 
 
-                elif plot_name == "3. Breadth/Depth Optimization":
-                    st.markdown(f"#### Plot 3: Breadth/Depth Optimization (L1 Budget: {ui_l1_budget})")
-                    fig3 = plotting_engine.plot_3_bd_optimization(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', current_uni, ui_l1_budget, ui_target_pct, total_clinics)
-                    if fig3: 
-                        st.pyplot(fig3)
-                        try:
-                            subset = df_ind[df_ind['L1_Budget_Pct'] == ui_l1_budget]
-                            best_row = subset.loc[subset['V1_MAE_Acc'].idxmax()]
-                            st.info(f"**What is this?** The Breadth vs. Depth mathematical trade-off. You are forcing the supervisor to use exactly a **{ui_l1_budget}** budget ({actual_l1_budget} total kids). To maximize accuracy under these specific constraints, the optimal strategy is: visit **{int(best_row['L1_C'])} clinics** and measure **{int(best_row['L1_K'])} children** per clinic, yielding **{best_row['V1_MAE_Acc']:.1f}%** accuracy.")
-                        except: pass
+                # elif plot_name == "3. Breadth/Depth Optimization":
+                #     st.markdown(f"#### Plot 3: Breadth/Depth Optimization (L1 Budget: {ui_l1_budget})")
+                #     fig3 = plotting_engine.plot_3_bd_optimization(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', current_uni, ui_l1_budget, ui_target_pct, total_clinics)
+                #     if fig3: 
+                #         st.pyplot(fig3)
+                #         try:
+                #             subset = df_ind[df_ind['L1_Budget_Pct'] == ui_l1_budget]
+                #             best_row = subset.loc[subset['V1_MAE_Acc'].idxmax()]
+                #             st.info(f"**What is this?** The Breadth vs. Depth mathematical trade-off. You are forcing the supervisor to use exactly a **{ui_l1_budget}** budget ({actual_l1_budget} total kids). To maximize accuracy under these specific constraints, the optimal strategy is: visit **{int(best_row['L1_C'])} clinics** and measure **{int(best_row['L1_K'])} children** per clinic, yielding **{best_row['V1_MAE_Acc']:.1f}%** accuracy.")
+                #         except: pass
 
-                elif plot_name == "4. Auditor Robustness":
-                    st.markdown("#### Plot 4: Auditor Robustness (Single Universe)")
-                    if len(current_uni) > 0:
-                        fig4 = plotting_engine.plot_4_robustness(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', current_uni[0], ui_target_pct)
-                        if fig4: 
-                            st.pyplot(fig4)
-                            st.info("**What is this?** This plot proves the 'Bottleneck' effect. It shows the accuracy of an Independent Auditor (L2) trying to catch bad Supervisors. Because the Auditor relies on the Supervisor's spreadsheet, their ultimate accuracy is hard-capped by whatever base budget the Supervisor originally used.")
+                # elif plot_name == "4. Auditor Robustness":
+                #     st.markdown("#### Plot 4: Auditor Robustness (Single Universe)")
+                #     if len(current_uni) > 0:
+                #         fig4 = plotting_engine.plot_4_robustness(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', current_uni[0], ui_target_pct)
+                #         if fig4: 
+                #             st.pyplot(fig4)
+                #             st.info("**What is this?** This plot proves the 'Bottleneck' effect. It shows the accuracy of an Independent Auditor (L2) trying to catch bad Supervisors. Because the Auditor relies on the Supervisor's spreadsheet, their ultimate accuracy is hard-capped by whatever base budget the Supervisor originally used.")
 
-                elif plot_name == "5. L2 Breadth Grid":
-                    st.markdown(f"#### Plot 5: Auditor Strategy Grid (L1 Budget Fixed at {ui_l1_budget})")
-                    fig5 = plotting_engine.plot_5_master_grid(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', ui_l1_budget, ui_target_pct, current_uni)
-                    if fig5: 
-                        st.pyplot(fig5)
-                        st.info(f"**What is this?** A multi-verse grid view showing how the Independent Auditor (L2) should optimize their *own* breadth (how many clinics they spot-check) given that the Supervisor below them already used a fixed **{ui_l1_budget}** sampling strategy.")
+                # elif plot_name == "5. L2 Breadth Grid":
+                #     st.markdown(f"#### Plot 5: Auditor Strategy Grid (L1 Budget Fixed at {ui_l1_budget})")
+                #     fig5 = plotting_engine.plot_5_master_grid(df_ind, 'V1_MAE_Acc', 'V1 MAE God-Mode', ui_l1_budget, ui_target_pct, current_uni)
+                #     if fig5: 
+                #         st.pyplot(fig5)
+                #         st.info(f"**What is this?** A multi-verse grid view showing how the Independent Auditor (L2) should optimize their *own* breadth (how many clinics they spot-check) given that the Supervisor below them already used a fixed **{ui_l1_budget}** sampling strategy.")
 
                 elif plot_name == "L2 Sampling Strategy":
                     st.markdown(f"#### Plot 2: L2 Strategy Heatmap (L2 Budget Fixed at: {ui_l2_budget})")
@@ -603,7 +602,7 @@ def render_nested_simulation_ui():
                             except Exception as e: 
                                 pass
                             with st.expander("How to Read This Heatmap & How It Is Calculated", expanded=True):
-                                 st.markdown("""
+                                 st.markdown(f"""
                                  ### The Goal of This Visual
                                  If an Independent Auditor (L2) is deployed, this heatmap shows them exactly how to spend their selected budget to maximize their success. It reveals the optimal **sampling strategy** needed to accurately rank and catch the worst-performing L1 Supervisors. 
 
@@ -617,7 +616,7 @@ def render_nested_simulation_ui():
                                      * The axis moves from **Left to Right**. 
                                      * On the far left, the Auditor uses a **Low Depth / High Breadth** strategy (e.g., checking many Anganwadi Centers, but only measuring 1 kid per center). 
                                      * As you move to the right, the strategy shifts to **High Depth / Low Breadth** (e.g., checking very few centers, but measuring almost every kid in those specific centers).
-                                 * **The Colors & Values:** The numbers inside the boxes represent the **Ranking Accuracy**. If a box says 90%, it means the auditor's sampling strategy successfully identified 9 out of the 10 truly worst-performing Supervisors. Dark green represents peak accuracy, while red warns of a highly inaccurate strategy.
+                                 * **The Colors & Values:** The numbers inside the boxes represent the **Ranking Accuracy**. If a box says 90%, it means the auditor's sampling strategy successfully identified 90% out of the truly worst-performing Supervisors. Dark green represents peak accuracy, while red represents a highly inaccurate strategy.
 
                                  ---
 
@@ -626,7 +625,7 @@ def render_nested_simulation_ui():
 
                                  1. **The L2 Ranking List:** When the L2 Auditor measures their sample of children, we calculate the average difference between what the L1 Supervisor recorded and what the L2 Auditor found `MAE(L1 vs. L2)`. Supervisors with massive data gaps are flagged as "bad" by the Auditor, and ranked from worst to best.
                                  2. **The Absolute Truth List:** Because this is a simulation, we know the exact biological reality of every child. We calculate the *true* difference between the L1 Supervisor's data and the real biological data `MAE(L1 vs. Real)`. This gives us the absolute, undeniable ranking of who the worst Supervisors truly are.
-                                 3. **The Overlap (The Final Score):** We compare the Auditor's list against the True list. If we are targeting the worst 30% of Supervisors, we check how many names appear on *both* lists. The percentage of correct matches becomes the Ranking Accuracy displayed in the heatmap.
+                                 3. **The Overlap (The Final Score):** We compare the Auditor's list against the True list. We apply the target filter (e.g., Top {ui_target_pct}). We look at the {ui_target_pct} of L1 from *both* lists and check how many overlap.  The percentage of correct matches becomes the Ranking Accuracy displayed in the heatmap.
                                  """)
 
                                  st.markdown("<hr style='border: 2px dashed #ccc;'>", unsafe_allow_html=True)
